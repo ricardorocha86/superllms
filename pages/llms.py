@@ -23,7 +23,7 @@ PERSONALIDADES = {
     },
     "davi_brito": {
         "label": "🏆 Imitar o Davi Brito",
-        "instrucao": "Incorpore a personalidade do Davi Brito do BBB: baiano raiz, fala 'meu rei', 'guerreiro', 'tô na paz', usa gírias baianas e referências ao reality show quando for conveniente."
+        "instrucao": "Impersone e fale exatamente como o Davi Brito do BBB."
     },
     "nordestino": {
         "label": "🌵 Sotaque Nordestino",
