@@ -171,6 +171,9 @@ async def testar_modelo(prompt, api_key, modelo_info, indice_modelo=0):
 # Função para exibir resultado de um modelo
 def exibir_resultado(indice, resultado, modelo_info):
     """Exibe o resultado de um modelo específico"""
+    if resultado[0].startswith("Erro:"):
+        return
+
     empresa = modelo_info['empresa']
     modelo_nome = modelo_info['modelo_nome']
     
@@ -467,7 +470,11 @@ if botao_teste:
                                     st.metric("🏃 Mais Rápido", f"{modelo_mais_rapido['modelo']} ({modelo_mais_rapido['tempo']:.2f}s)")
                                     st.metric("🐌 Mais Lento", f"{modelo_mais_lento['modelo']} ({modelo_mais_lento['tempo']:.2f}s)")
                                     st.metric("💸 Mais Caro", f"{modelo_mais_caro['modelo']} (${modelo_mais_caro['custo_total']:.6f})")
-                            
+
+                            if modelos_erro:
+                                taxa_erro = len(modelos_erro) / len(relatorio) * 100
+                                st.caption(f"⚠️ Taxa de erros: {len(modelos_erro)}/{len(relatorio)} modelos ({taxa_erro:.0f}%)")
+
                 finally:
                     loop.close()
                         
