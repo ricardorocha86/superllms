@@ -262,33 +262,23 @@ st.caption("Compare até 24 dos melhores LLMs do mundo de 11 empresas diferentes
 st.markdown("### 💬 Prompt")
 prompt = st.text_area("Digite seu prompt:", height=120)
 
-# Layout em duas colunas
-col1, col2 = st.columns([1, 2.5], gap="small", border=True)
-
-with col2:
-    # Exibir DataFrame com seleção
-    st.markdown("### 📊 Seleção de Modelos")
+with st.expander("📊 Seleção de Modelos", expanded=True):
     df_selecao = df_modelos.copy()
     df_selecao['Selecionar'] = True
-    
-    # Converter logos para data URLs (base64)
+
     def image_to_data_url(image_path):
-        """Converte uma imagem local para data URL"""
         try:
             with open(image_path, "rb") as image_file:
                 encoded_string = base64.b64encode(image_file.read()).decode()
                 return f"data:image/jpeg;base64,{encoded_string}"
         except:
             return None
-    
-    # Converter logos para data URLs
+
     df_selecao['logo'] = df_selecao['logo'].apply(lambda x: image_to_data_url(f"logos/{x}") if x else None)
-    
-    # Reorganizar colunas na ordem solicitada (incluindo logo e ocultando modelo_id da visualização)
+
     colunas_ordenadas = ['Selecionar', 'logo', 'empresa', 'modelo_nome', 'custo_input_1M', 'custo_output_1M', 'tier', 'creditos', 'base_url']
     df_selecao = df_selecao[colunas_ordenadas]
-    
-    # Usar st.data_editor para permitir seleção
+
     df_editado = st.data_editor(
         df_selecao,
         column_config={
@@ -307,26 +297,20 @@ with col2:
             "custo_input_1M": st.column_config.TextColumn("💰 Input/1M", disabled=True),
             "custo_output_1M": st.column_config.TextColumn("💰 Output/1M", disabled=True),
             "tier": st.column_config.TextColumn("⭐ Tier", disabled=True),
-                "creditos": st.column_config.NumberColumn("🎫 Créditos", disabled=True),
-                "base_url": st.column_config.TextColumn("🌐 Provedor", disabled=True),
-            },
+            "creditos": st.column_config.NumberColumn("🎫 Créditos", disabled=True),
+            "base_url": st.column_config.TextColumn("🌐 Provedor", disabled=True),
+        },
         hide_index=True,
         width='stretch',
         height=500
     )
 
-with col1:
-    # Preview do prompt final
-    st.markdown("### 📝 Preview do Prompt")
+with st.expander("📝 Preview do Prompt"):
     if prompt.strip():
-        # Construir prompt final para preview
         prompt_preview = construir_prompt_final(prompt, tamanho_resposta, selecoes_personalidade)
-        
-        # Contar tokens do prompt
         tokens_input = contar_tokens(prompt_preview)
-        
         st.markdown(f"**Prompt que será enviado:** ({tokens_input} tokens)")
-        st.text_area("", value=prompt_preview, height=450, disabled=True, label_visibility="collapsed")
+        st.text_area("", value=prompt_preview, height=300, disabled=True, label_visibility="collapsed")
     else:
         st.info("Digite um prompt para ver o preview")
 
