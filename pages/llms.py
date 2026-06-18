@@ -21,9 +21,9 @@ PERSONALIDADES = {
         "label": "✨ Formatação Rica",
         "instrucao": "Formate a resposta com negrito, itálico e emojis para melhor legibilidade e engajamento."
     },
-    "vegeta": {
-        "label": "👑 Imitar o Vegeta",
-        "instrucao": "Incorpore a personalidade de Vegeta de Dragon Ball Z e uses seus jargoes quando for conveniente"
+    "davi_brito": {
+        "label": "🏆 Imitar o Davi Brito",
+        "instrucao": "Incorpore a personalidade do Davi Brito do BBB: baiano raiz, fala 'meu rei', 'guerreiro', 'tô na paz', usa gírias baianas e referências ao reality show quando for conveniente."
     },
     "nordestino": {
         "label": "🌵 Sotaque Nordestino",
