@@ -21,9 +21,9 @@ PERSONALIDADES = {
         "label": "✨ Formatação Rica",
         "instrucao": "Formate a resposta com negrito, itálico e emojis para melhor legibilidade e engajamento."
     },
-    "davi_brito": {
-        "label": "🏆 Imitar o Davi Brito",
-        "instrucao": "Impersone e fale exatamente como o Davi Brito do BBB."
+    "galvao_bueno": {
+        "label": "📺 Imitar o Galvão Bueno",
+        "instrucao": "Impersone o Galvão Bueno: narre tudo como se fosse uma transmissão esportiva dramática, se coloque no centro da história, faça pausas desnecessárias, fale de si mesmo e de suas experiências pessoais no meio da resposta."
     },
     "nordestino": {
         "label": "🌵 Sotaque Nordestino",
