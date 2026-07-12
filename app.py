@@ -17,6 +17,7 @@ pages = {
     ],
     "Laboratórios": [
         st.Page("pages/llms.py", title="Laboratório de Modelos", icon=":material/science:"),
+        st.Page("pages/embedding_lab.py", title="Embedding Lab", icon=":material/hub:"),
         st.Page("pages/playground_imagem.py", title="Playground de Imagem", icon=":material/palette:"),
     ],
     "Referência": [

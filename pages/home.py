@@ -15,11 +15,13 @@ cards = [
     ("💬", "Chatbot", "Converse com uma persona usando qualquer modelo configurado na base.", "pages/chatbot.py"),
     ("✨", "Engenharia de Prompt", "Aprenda a escrever instruções melhores e use o otimizador de prompt com IA.", "pages/otimizador_prompt.py"),
     ("🔬", "Laboratório de Modelos", "Compare provedores, modelos, estilos de resposta e custos.", "pages/llms.py"),
+    ("🧩", "Embedding Lab", "Aprenda embeddings, similaridade, busca semântica, classificação e multimodalidade.", "pages/embedding_lab.py"),
 ]
 CARD_IMAGES = {
     "Chatbot": "assets/home/chatbot.png",
     "Engenharia de Prompt": "assets/home/prompt-engineering.png",
     "Laboratório de Modelos": "assets/home/models-lab.png",
+    "Embedding Lab": "assets/home/embedding-lab.png",
 }
 
 for start in range(0, len(cards), 2):
