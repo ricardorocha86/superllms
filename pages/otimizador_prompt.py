@@ -7,9 +7,6 @@ import streamlit as st
 from ai_helpers import generate_text, get_secret
 
 
-st.set_page_config(page_title="Engenharia de Prompt", page_icon="✨", layout="wide")
-
-
 def montar_prompt_local(pedido: str, contexto: str, publico: str, formato: str, restricoes: str, idioma: str) -> str:
     """Fallback determinístico: mantém a ferramenta útil sem uma chave de API."""
     blocos = [
@@ -28,12 +25,15 @@ def montar_prompt_local(pedido: str, contexto: str, publico: str, formato: str, 
 def limpar_prompt_gerado(texto: str) -> str:
     """Remove apenas molduras de Markdown para deixar a saída copiável."""
     resultado = (texto or "").strip()
-    if "```" in resultado:
-        partes = [parte.strip() for parte in resultado.split("```") if parte.strip()]
-        if partes:
-            resultado = max(partes, key=len)
-            if resultado.splitlines() and resultado.splitlines()[0].lower() in {"markdown", "text", "txt"}:
-                resultado = "\n".join(resultado.splitlines()[1:]).strip()
+    linhas = resultado.splitlines()
+    if (
+        len(linhas) >= 2
+        and linhas[0].lstrip().startswith("```")
+        and linhas[-1].strip() == "```"
+    ):
+        # Remove somente a moldura externa. Blocos de código dentro do prompt
+        # fazem parte do conteúdo e precisam ser preservados.
+        resultado = "\n".join(linhas[1:-1]).strip()
     for prefixo in ("Prompt otimizado:", "Prompt final:", "Novo prompt:"):
         if resultado.lower().startswith(prefixo.lower()):
             resultado = resultado[len(prefixo):].lstrip(" \n:")
@@ -76,7 +76,7 @@ Escreva o prompt em português do Brasil."""
     )
 
 
-st.title("✨ Engenharia de Prompt e de Contexto")
+st.title("Engenharia de Prompt e de Contexto")
 st.caption("Aprenda a transformar uma intenção vaga em uma instrução testável, reutilizável e fácil de avaliar.")
 
 aba_aula, aba_ferramenta, aba_checklist = st.tabs(["Aula", "Otimizador com IA", "Checklist"])
@@ -173,7 +173,7 @@ with aba_ferramenta:
         formato = st.text_area("Formato esperado", placeholder="Ex.: tabela, roteiro de 5 cenas, JSON...", height=130)
         restricoes = st.text_area("Restrições e critérios de qualidade", placeholder="Ex.: até 150 palavras, sem promessas, com CTA...", height=130)
 
-    if st.button("✨ Melhorar meu prompt", type="primary", use_container_width=True):
+    if st.button("Melhorar meu prompt", icon=":material/auto_fix_high:", type="primary", use_container_width=True):
         if not pedido.strip():
             st.warning("Escreva pelo menos um pedido para começar.")
         else:

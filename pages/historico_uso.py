@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.title("📊 Histórico de Uso")
+st.title("Histórico de Uso")
 
 st.markdown("""
 Esta página está em desenvolvimento e será implementada em breve.

@@ -9,8 +9,6 @@ from modelos import DATA_ATUALIZACAO, df_modelos
 from personas import PERSONALIDADES, construir_prompt_final
 
 
-st.set_page_config(page_title="Chatbot", page_icon="💬", layout="wide")
-
 AVATARES = {"user": "🙂", "assistant": "⚡"}
 
 
@@ -65,7 +63,7 @@ with st.sidebar:
             language="text",
         )
 
-    if st.button("🧹 Nova conversa", use_container_width=True):
+    if st.button("Nova conversa", icon=":material/delete_sweep:", use_container_width=True):
         st.session_state["chat_messages"] = []
         st.rerun()
     st.divider()
@@ -80,7 +78,7 @@ if st.session_state.get("chat_config_signature") != config_signature:
     st.session_state["chat_config_signature"] = config_signature
     st.session_state["chat_messages"] = []
 
-st.title("💬 Chatbot")
+st.title("Chatbot")
 st.caption(f"{modelo_label(modelo_info)} · conversa temporária")
 
 for mensagem in st.session_state.get("chat_messages", []):

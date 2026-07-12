@@ -1,9 +1,7 @@
 import streamlit as st
 
 
-st.set_page_config(page_title="SuperLLMs — Home", page_icon="⚡", layout="wide")
-
-st.title("⚡ SuperLLMs")
+st.title("SuperLLMs")
 st.subheader("Um espaço para aprender, testar e construir com modelos de IA")
 st.write(
     "Escolha um caminho abaixo para começar. A plataforma reúne laboratório de modelos, "
@@ -12,10 +10,10 @@ st.write(
 
 st.markdown("## Comece por aqui")
 cards = [
-    ("💬", "Chatbot", "Converse com uma persona usando qualquer modelo configurado na base.", "pages/chatbot.py"),
-    ("✨", "Engenharia de Prompt", "Aprenda a escrever instruções melhores e use o otimizador de prompt com IA.", "pages/otimizador_prompt.py"),
-    ("🔬", "Laboratório de Modelos", "Compare provedores, modelos, estilos de resposta e custos.", "pages/llms.py"),
-    ("🧩", "Embedding Lab", "Aprenda embeddings, similaridade, busca semântica, classificação e multimodalidade.", "pages/embedding_lab.py"),
+    (":material/chat:", "Chatbot", "Converse com uma persona usando qualquer modelo configurado na base.", "pages/chatbot.py"),
+    (":material/auto_fix_high:", "Engenharia de Prompt", "Aprenda a escrever instruções melhores e use o otimizador de prompt com IA.", "pages/otimizador_prompt.py"),
+    (":material/science:", "Laboratório de Modelos", "Compare provedores, modelos, estilos de resposta e custos.", "pages/llms.py"),
+    (":material/hub:", "Embedding Lab", "Aprenda embeddings, similaridade, busca semântica, classificação e multimodalidade.", "pages/embedding_lab.py"),
 ]
 CARD_IMAGES = {
     "Chatbot": "assets/home/chatbot.png",
@@ -30,7 +28,7 @@ for start in range(0, len(cards), 2):
         with column:
             with st.container(border=True):
                 st.image(CARD_IMAGES[title], use_container_width=True)
-                st.markdown(f"### {icon} {title}")
+                st.markdown(f"### {title}")
                 st.write(description)
                 st.page_link(target, label=f"Abrir {title}", icon=icon, use_container_width=True)
 
@@ -48,20 +46,20 @@ for column, (title, description) in zip(columns, use_cases):
         st.caption(description)
 
 st.markdown("## Exemplos rápidos")
-with st.expander("📝 Organizar uma reunião"):
+with st.expander("Organizar uma reunião"):
     st.code(
         "Você é um secretário executivo. A partir das notas abaixo, produza: "
         "(1) decisões, (2) responsáveis, (3) prazos e (4) perguntas em aberto. "
         "Não invente informações; marque lacunas como 'não informado'.\n\n[notas]",
         language="text",
     )
-with st.expander("📊 Explorar uma base textual"):
+with st.expander("Explorar uma base textual"):
     st.code(
         "Use o Laboratório de Modelos para comparar respostas, provedores, "
         "personas, tempo de geração e custo estimado.",
         language="text",
     )
-with st.expander("🧩 Melhorar um pedido vago"):
+with st.expander("Melhorar um pedido vago"):
     st.code(
         "Pedido vago: 'faça um post sobre meu produto'\n\n"
         "No Otimizador, informe público, objetivo, contexto, restrições e formato "

@@ -80,18 +80,18 @@ def generate_text(
     if api_type == "anthropic_messages":
         if Anthropic is None:
             raise RuntimeError("Instale o pacote anthropic para usar este modelo.")
-        client = Anthropic(api_key=api_key, timeout=90.0)
-        response = client.messages.create(
-            model=model_id,
-            max_tokens=2048,
-            system=instructions or None,
-            messages=messages,
-        )
-        return "\n".join(
-            str(block.text)
-            for block in getattr(response, "content", [])
-            if getattr(block, "text", None)
-        ).strip()
+        with Anthropic(api_key=api_key, timeout=90.0) as client:
+            response = client.messages.create(
+                model=model_id,
+                max_tokens=2048,
+                system=instructions or None,
+                messages=messages,
+            )
+            return "\n".join(
+                str(block.text)
+                for block in getattr(response, "content", [])
+                if getattr(block, "text", None)
+            ).strip()
 
     kwargs = {"api_key": api_key, "timeout": 90.0}
     if base_url:

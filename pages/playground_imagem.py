@@ -113,9 +113,7 @@ def resumo_erro_api(exc):
     return " | ".join(partes)
 
 
-st.set_page_config(page_title="Playground GPT Image 2", page_icon="🎨", layout="wide")
-
-st.title("🎨 Playground GPT Image 2")
+st.title("Playground GPT Image 2")
 st.caption("Gere, edite e compare imagens usando a API oficial da OpenAI.")
 
 with st.sidebar:

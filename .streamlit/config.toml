@@ -1,4 +1,27 @@
 [theme]
-base="light"
-primaryColor="#1162f5"
-secondaryBackgroundColor="#c0d4fd"
+# Tema único do aplicativo. Ajustes visuais devem ser feitos aqui para manter
+# todas as páginas consistentes em desenvolvimento e em produção.
+base = "light"
+primaryColor = "#0068C9"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+borderColor = "#D6D8DC"
+linkColor = "#0068C9"
+
+# Cores semânticas para alertas e elementos nativos do Streamlit.
+redColor = "#D83A52"
+orangeColor = "#D46B08"
+yellowColor = "#A66A00"
+blueColor = "#0068C9"
+greenColor = "#1C7C54"
+violetColor = "#6E56CF"
+
+# Tipografia nativa, legível e sem dependências externas.
+font = "sans serif"
+headingFont = "sans serif"
+codeFont = "monospace"
+baseFontSize = 16
+baseRadius = "0.5rem"
+buttonRadius = "0.5rem"
+showSidebarBorder = true

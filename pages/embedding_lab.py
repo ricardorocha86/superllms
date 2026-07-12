@@ -19,13 +19,6 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-st.set_page_config(
-    page_title="EmbeddingLab | Aula com Gemini",
-    page_icon=":material/hub:",
-    layout="wide",
-)
-
-
 ROOT = Path(__file__).resolve().parent
 SCRIPTS_DIR = ROOT / "scripts"
 OUTPUTS_DIR = ROOT / "outputs"
@@ -71,138 +64,6 @@ SCRIPT_METADATA = {
         "output_hint": "Salva os pares avaliados em outputs/similaridade_cosseno.csv.",
     },
 }
-
-
-#load_dotenv()
-#API_KEY = os.getenv("GEMINI_API_KEY")
-
-
-st.markdown(
-    """
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-    :root {
-        --bg: #f5f2eb;
-        --panel: #fffdfa;
-        --ink: #172033;
-        --muted: #556070;
-        --brand: #0f766e;
-        --brand-2: #1d4ed8;
-        --accent: #c2410c;
-        --line: #ddd4c5;
-        --soft: rgba(255, 255, 255, 0.84);
-    }
-
-    .stApp {
-        background:
-            radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 32%),
-            radial-gradient(circle at top right, rgba(194, 65, 12, 0.10), transparent 28%),
-            linear-gradient(180deg, #f8f5ef 0%, #f2ece1 100%);
-        color: var(--ink);
-        font-family: "Source Sans 3", sans-serif;
-    }
-
-    [data-testid="stHeader"] {
-        background: transparent;
-    }
-
-    [data-testid="stSidebar"] {
-        background: rgba(255, 253, 250, 0.94);
-        border-right: 1px solid var(--line);
-    }
-
-    .hero {
-        background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(255,250,241,0.96));
-        border: 1px solid rgba(221, 212, 197, 0.95);
-        border-radius: 26px;
-        padding: 30px 32px 26px 32px;
-        box-shadow: 0 18px 40px rgba(84, 67, 42, 0.08);
-        margin-bottom: 1rem;
-    }
-
-    .hero h1 {
-        font-family: "Space Grotesk", sans-serif;
-        font-size: 3rem;
-        line-height: 1.0;
-        margin: 0 0 0.45rem 0;
-        color: #0f172a;
-    }
-
-    .hero p {
-        margin: 0.35rem 0;
-        color: var(--muted);
-        font-size: 1.08rem;
-    }
-
-    .pill-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.55rem;
-        margin-top: 1rem;
-    }
-
-    .pill {
-        display: inline-block;
-        border-radius: 999px;
-        padding: 0.38rem 0.8rem;
-        font-size: 0.9rem;
-        font-weight: 700;
-        background: rgba(15, 118, 110, 0.10);
-        color: var(--brand);
-        border: 1px solid rgba(15, 118, 110, 0.18);
-    }
-
-    .card {
-        background: var(--soft);
-        border: 1px solid var(--line);
-        border-radius: 20px;
-        padding: 18px 18px 14px 18px;
-        margin-bottom: 14px;
-        box-shadow: 0 8px 18px rgba(84, 67, 42, 0.05);
-    }
-
-    .card h3 {
-        font-family: "Space Grotesk", sans-serif;
-        font-size: 1.05rem;
-        margin: 0 0 0.4rem 0;
-    }
-
-    .card p, .card li {
-        color: var(--muted);
-        margin-bottom: 0.3rem;
-    }
-
-    .section-title {
-        font-family: "Space Grotesk", sans-serif;
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin-top: 0.4rem;
-        margin-bottom: 0.4rem;
-    }
-
-    .metric-strip {
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 12px 14px;
-        background: var(--soft);
-        margin-bottom: 12px;
-    }
-
-    .gallery-note {
-        font-size: 0.92rem;
-        color: var(--muted);
-    }
-
-    code {
-        color: #9a3412 !important;
-        background: #fff3e8 !important;
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
 
 
 def slugify(text: str) -> str:
@@ -605,23 +466,12 @@ def load_script_catalog() -> list[dict[str, str]]:
 
 
 def render_header():
-    st.markdown(
-        """
-        <div class="hero">
-            <h1>Embeddings com Gemini</h1>
-            <p>Uma aula aplicada sobre representação vetorial, similaridade semântica, busca,
-            classificação zero-shot e multimodalidade.</p>
-            <div class="pill-row">
-                <span class="pill">Espaço vetorial</span>
-                <span class="pill">Similaridade do cosseno</span>
-                <span class="pill">Busca semântica</span>
-                <span class="pill">Zero-shot</span>
-                <span class="pill">Multimodalidade</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.title("Embeddings com Gemini")
+    st.write(
+        "Uma aula aplicada sobre representação vetorial, similaridade semântica, busca, "
+        "classificação zero-shot e multimodalidade."
     )
+    st.caption("Espaço vetorial · Similaridade do cosseno · Busca semântica · Zero-shot · Multimodalidade")
 
 
 def render_theory(model_name: str, output_dim: int):
@@ -629,59 +479,44 @@ def render_theory(model_name: str, output_dim: int):
 
     left, right = st.columns([1.15, 0.85])
     with left:
-        st.markdown(
-            """
-            <div class="card">
-                <h3>A ideia central da aula</h3>
-                <p>Embeddings são vetores que transformam conteúdos em coordenadas numéricas.
-                A consequência prática disso é poderosa: textos, imagens e outros objetos passam a
-                poder ser comparados por significado, e não apenas por palavras idênticas.</p>
-                <p>Quando dois conteúdos ocupam regiões próximas do espaço vetorial, dizemos que
-                eles são semanticamente parecidos. É essa geometria que sustenta busca vetorial,
-                recomendação, agrupamento e classificação sem treinamento específico.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-            <div class="card">
-                <h3>Como pensar embeddings em sala</h3>
-                <p>1. O modelo lê o conteúdo e o projeta em um espaço de alta dimensão.</p>
-                <p>2. A posição do vetor captura relações de sentido e contexto.</p>
-                <p>3. A comparação entre vetores permite decidir o que é mais próximo, mais distante
-                ou mais alinhado com uma tarefa.</p>
-                <p>4. A mesma lógica serve para consulta-documento, texto-classe e texto-imagem.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.markdown("### A ideia central da aula")
+            st.write(
+                "Embeddings são vetores que transformam conteúdos em coordenadas numéricas. "
+                "Textos, imagens e outros objetos passam a poder ser comparados por significado, "
+                "e não apenas por palavras idênticas."
+            )
+            st.write(
+                "Quando dois conteúdos ocupam regiões próximas do espaço vetorial, eles são "
+                "semanticamente parecidos. Essa geometria sustenta busca, recomendação, "
+                "agrupamento e classificação sem treinamento específico."
+            )
+        with st.container(border=True):
+            st.markdown("### Como pensar embeddings em sala")
+            st.markdown(
+                "1. O modelo projeta o conteúdo em um espaço de alta dimensão.\n"
+                "2. A posição do vetor captura relações de sentido e contexto.\n"
+                "3. A comparação entre vetores mede proximidade e alinhamento com a tarefa.\n"
+                "4. A mesma lógica serve para consulta-documento, texto-classe e texto-imagem."
+            )
     with right:
-        st.markdown(
-            """
-            <div class="card">
-                <h3>Três perguntas que organizam a aula</h3>
-                <p>Como representar significado numericamente?</p>
-                <p>Como medir proximidade entre vetores?</p>
-                <p>Como transformar essa proximidade em uma decisão útil?</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-            <div class="card">
-                <h3>Aplicações que vamos observar</h3>
-                <p>Busca semântica em títulos de trabalhos.</p>
-                <p>Classificação zero-shot de reviews.</p>
-                <p>Comparação multimodal entre texto e imagem.</p>
-                <p>Exercício aplicado com comentários de e-commerce.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.markdown("### Três perguntas que organizam a aula")
+            st.markdown(
+                "- Como representar significado numericamente?\n"
+                "- Como medir proximidade entre vetores?\n"
+                "- Como transformar essa proximidade em uma decisão útil?"
+            )
+        with st.container(border=True):
+            st.markdown("### Aplicações que vamos observar")
+            st.markdown(
+                "- Busca semântica em títulos de trabalhos.\n"
+                "- Classificação zero-shot de reviews.\n"
+                "- Comparação multimodal entre texto e imagem.\n"
+                "- Exercício aplicado com comentários de e-commerce."
+            )
 
-    st.markdown('<div class="section-title">Similaridade do Cosseno</div>', unsafe_allow_html=True)
+    st.subheader("Similaridade do cosseno")
     c1, c2 = st.columns([0.9, 1.1])
     with c1:
         st.markdown(
@@ -716,48 +551,27 @@ def render_theory(model_name: str, output_dim: int):
         )
         st.dataframe(cosine_df, width="stretch", hide_index=True)
 
-    st.markdown('<div class="section-title">Modelos e decisões de projeto</div>', unsafe_allow_html=True)
+    st.subheader("Modelos e decisões de projeto")
     m1, m2, m3 = st.columns(3)
     with m1:
-        st.markdown(
-            """
-            <div class="card">
-                <h3><code>gemini-embedding-001</code></h3>
-                <p>Modelo estável para texto. Permite informar <code>task_type</code> diretamente
-                na chamada e funciona muito bem para similaridade, classificação e recuperação textual.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.markdown("### `gemini-embedding-001`")
+            st.write("Modelo estável para texto. Permite informar `task_type` diretamente na chamada e funciona bem para similaridade, classificação e recuperação textual.")
     with m2:
-        st.markdown(
-            """
-            <div class="card">
-                <h3><code>gemini-embedding-2-preview</code></h3>
-                <p>Modelo multimodal. Trabalha com texto, imagem, áudio, vídeo e PDF no mesmo espaço vetorial.
-                Para tarefas textuais, a orientação da documentação é colocar a tarefa no próprio prompt.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.markdown("### `gemini-embedding-2-preview`")
+            st.write("Modelo multimodal para texto, imagem, áudio, vídeo e PDF no mesmo espaço vetorial. Para tarefas textuais, a tarefa deve ir no próprio prompt.")
     with m3:
-        st.markdown(
-            """
-            <div class="card">
-                <h3>Dimensão do vetor</h3>
-                <p>As dimensões mais úteis em aula costumam ser 768, 1536 e 3072.
-                Em dimensões menores que 3072, normalizamos os vetores antes de comparar.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.markdown("### Dimensão do vetor")
+            st.write("As dimensões mais úteis em aula costumam ser 768, 1536 e 3072. Em dimensões menores que 3072, os vetores são normalizados antes da comparação.")
 
     st.warning(
         "Os espaços vetoriais de `gemini-embedding-001` e `gemini-embedding-2-preview` são incompatíveis. "
         "Não compare vetores produzidos por modelos diferentes."
     )
 
-    st.markdown('<div class="section-title">Código-base de referência</div>', unsafe_allow_html=True)
+    st.subheader("Código-base de referência")
     st.code(
         """from google import genai
 from google.genai import types
@@ -994,10 +808,9 @@ def render_zero_shot_case(client, model_name: str, output_dim: int):
     with c1:
         text_column = st.selectbox("Texto a classificar", options=["Comentário", "Título"], index=0, key="zero_shot_text_column")
     with c2:
-        st.markdown(
-            '<div class="metric-strip">O objetivo agora não é medir satisfação geral, mas identificar a natureza da reclamação. '
-            "Isso é útil para triagem, roteamento de atendimento e análise de recorrência de problemas.</div>",
-            unsafe_allow_html=True,
+        st.info(
+            "O objetivo agora não é medir satisfação geral, mas identificar a natureza da reclamação. "
+            "Isso é útil para triagem, roteamento de atendimento e análise de recorrência de problemas."
         )
 
     st.dataframe(dataset, width="stretch", hide_index=True)
@@ -1115,7 +928,7 @@ def render_multimodal_lab(client, model_name: str, output_dim: int):
         selected = SAMPLE_IMAGES[selected_name]
         image_bytes = fetch_remote_image(selected["url"])
         mime_type = selected["mime_type"]
-        st.markdown(f'<p class="gallery-note">Imagem atual: {selected_name}</p>', unsafe_allow_html=True)
+        st.caption(f"Imagem atual: {selected_name}")
     else:
         uploaded = st.file_uploader("Envie uma imagem", type=["png", "jpg", "jpeg"], key="multimodal_upload")
         if uploaded is not None:
@@ -1193,38 +1006,17 @@ def render_multimodal_lab(client, model_name: str, output_dim: int):
     st.markdown("### Outras modalidades para explorar")
     o1, o2, o3 = st.columns(3)
     with o1:
-        st.markdown(
-            """
-            <div class="card">
-                <h3>Áudio</h3>
-                <p>Podemos embutir trechos de fala, música ou ruído ambiente e comparar com descrições textuais.
-                Um bom exercício é distinguir notícia, aula, propaganda e conversa espontânea.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.markdown("### Áudio")
+            st.write("Podemos embutir trechos de fala, música ou ruído ambiente e compará-los com descrições textuais. Um bom exercício é distinguir notícia, aula, propaganda e conversa espontânea.")
     with o2:
-        st.markdown(
-            """
-            <div class="card">
-                <h3>Vídeo</h3>
-                <p>Vídeos curtos podem ser convertidos para o mesmo espaço vetorial. Isso abre espaço para busca por cenas,
-                agrupamento por conteúdo visual e comparação entre descrição textual e clipe.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.markdown("### Vídeo")
+            st.write("Vídeos curtos podem ser convertidos para o mesmo espaço vetorial, permitindo busca por cenas, agrupamento por conteúdo visual e comparação entre texto e clipe.")
     with o3:
-        st.markdown(
-            """
-            <div class="card">
-                <h3>PDF e documentos</h3>
-                <p>É possível embutir páginas de documentos e recuperar materiais por tema, estilo e evidência visual.
-                Isso é útil em RAG, análise documental e triagem de acervos.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.markdown("### PDF e documentos")
+            st.write("É possível embutir páginas de documentos e recuperar materiais por tema, estilo e evidência visual. Isso é útil em RAG, análise documental e triagem de acervos.")
 
 
 def render_example_page(client, model_name: str, output_dim: int):

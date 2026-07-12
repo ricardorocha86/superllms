@@ -377,19 +377,11 @@ def exibir_resultado(resultado, modelo_info):
     empresa = modelo_info["empresa"]
     modelo_nome = modelo_info["modelo_nome"]
     provedor = modelo_info["provedor"]
-    cor = modelo_info.get("cor", "#444444")
-
     if not resultado["ok"]:
         return
 
     tokens_output = resultado["tokens_output"] or contar_tokens(resultado["texto"])
-    header_html = (
-        f'<div style="margin: 10px 0; padding: 10px; border-left: 4px solid {cor};">'
-        f'<strong style="color: {cor};">{provedor} | {empresa} - {modelo_nome}</strong> '
-        f'<span style="color: #888888;">| {resultado["tempo"]:.2f}s | {tokens_output} tokens</span>'
-        f"</div>"
-    )
-    st.markdown(header_html, unsafe_allow_html=True)
+    st.caption(f"{provedor} | {empresa} — {modelo_nome} · {resultado['tempo']:.2f}s · {tokens_output} tokens")
     st.markdown(resultado["texto"] or "_Resposta vazia._")
 
 
@@ -437,8 +429,6 @@ def calcular_relatorio_custos(resultados, modelos_selecionados, prompt_final):
     return relatorio
 
 
-st.set_page_config(layout="wide")
-
 with st.sidebar:
     st.markdown("### Configurações de personalidade")
     selecoes_personalidade = {}
@@ -477,10 +467,12 @@ st.caption(
     f"{', '.join(sorted(df_modelos['provedor'].unique()))}."
 )
 
-prompt = st.text_area("Digite seu prompt:", height=120)
+col_prompt, col_configuracoes = st.columns(2, gap="large")
+with col_prompt:
+    prompt = st.text_area("Digite seu prompt:", height=320)
 
 
-with st.expander("Seleção de modelos", expanded=True):
+with col_configuracoes, st.expander("Seleção de modelos", expanded=False):
     df_base = df_modelos.sort_values(
         ["provedor", "status", "empresa", "modelo_nome"], kind="stable"
     ).copy()
@@ -617,7 +609,7 @@ if not modelos_selecionados.empty:
     modelos_selecionados = modelos_selecionados.sort_values("ordem").drop(columns=["ordem"])
 
 
-with st.expander("Preview do prompt"):
+with col_configuracoes, st.expander("Preview do prompt", expanded=False):
     if prompt.strip():
         prompt_preview = construir_prompt_final(prompt, tamanho_resposta, selecoes_personalidade)
         st.markdown(f"**Prompt enviado:** ({contar_tokens(prompt_preview)} tokens estimados)")
@@ -632,18 +624,14 @@ with st.expander("Preview do prompt"):
         st.info("Digite um prompt para ver o preview.")
 
 
-if modelos_selecionados.empty:
-    st.warning("Selecione pelo menos um modelo para testar.")
-else:
-    total_creditos = int(modelos_selecionados["creditos"].sum())
-    st.success(
-        f"{len(modelos_selecionados)} modelo(s) selecionado(s) | Total: {total_creditos} créditos"
-    )
-
-
 botao_teste = st.button(
     "Testar modelos selecionados", type="primary", use_container_width=True
 )
+
+if modelos_selecionados.empty:
+    st.warning("Selecione pelo menos um modelo para testar.")
+else:
+    st.success(f"Modelos Selecionados: {len(modelos_selecionados)}")
 
 
 if botao_teste:
@@ -654,13 +642,11 @@ if botao_teste:
     else:
         rede_ok, erro_rede = checar_rede_externa()
         if not rede_ok:
-            st.error(
-                "O processo atual do Streamlit não consegue abrir conexão externa. "
-                "Isso normalmente acontece quando o app foi iniciado dentro do sandbox "
-                "do Codex. Feche os processos antigos do Streamlit e inicie o app fora "
-                f"do sandbox. Detalhe: {erro_rede}"
+            st.warning(
+                "Não foi possível verificar a conectividade com openrouter.ai. "
+                "Os testes continuarão, pois os outros provedores podem estar acessíveis. "
+                f"Detalhe: {erro_rede}"
             )
-            st.stop()
 
         prompt_final = construir_prompt_final(prompt, tamanho_resposta, selecoes_personalidade)
 
