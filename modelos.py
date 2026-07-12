@@ -1,61 +1,565 @@
-# Base de dados dos modelos de IA
+# Base atualizada dos modelos de IA usados pelo app.
+#
+# Fontes consultadas em 2026-07-11:
+# - OpenAI API docs: https://platform.openai.com/docs/models
+# - Google Gemini API docs: https://ai.google.dev/gemini-api/docs/models
+# - Anthropic Claude Platform docs: https://docs.anthropic.com/en/docs/about-claude/models/overview
+# - Groq supported models: https://console.groq.com/docs/models
+# - OpenRouter public models API: https://openrouter.ai/api/v1/models
+# - X.AI models API: https://api.x.ai/v1/models
+# - DeepSeek models API: https://api.deepseek.com/models
+
 import pandas as pd
 
+
+DATA_ATUALIZACAO = "2026-07-11"
+
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+XAI_BASE_URL = "https://api.x.ai/v1"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+
+
+def _modelo(
+    *,
+    empresa,
+    modelo_id,
+    modelo_nome,
+    provedor,
+    base_url,
+    api_tipo,
+    api_key_secret,
+    custo_input_1M,
+    custo_output_1M,
+    tier,
+    creditos,
+    contexto_tokens,
+    status,
+    fonte,
+    logo,
+    cor,
+    observacao="",
+    selecionar_padrao=False,
+):
+    return {
+        "uid": f"{provedor}::{modelo_id}",
+        "empresa": empresa,
+        "modelo_id": modelo_id,
+        "modelo_nome": modelo_nome,
+        "provedor": provedor,
+        "base_url": base_url,
+        "api_tipo": api_tipo,
+        "api_key_secret": api_key_secret,
+        "custo_input_1M": custo_input_1M,
+        "custo_output_1M": custo_output_1M,
+        "tier": tier,
+        "creditos": creditos,
+        "contexto_tokens": contexto_tokens,
+        "status": status,
+        "fonte": fonte,
+        "logo": logo,
+        "cor": cor,
+        "observacao": observacao,
+        "selecionar_padrao": selecionar_padrao,
+    }
+
+
 modelos_db = [
-    {"empresa": "OpenAI", "modelo_id": "gpt-5-nano", "modelo_nome": "GPT-5 Nano", "base_url": "https://api.openai.com/v1", "custo_input_1M": "$0.05", "custo_output_1M": "$0.40", "tier": "🥉 Básico", "creditos": 1, "cor": "#1f77b4", "logo": "openai.jpg"},
-    {"empresa": "OpenAI", "modelo_id": "gpt-5-mini", "modelo_nome": "GPT-5 Mini", "base_url": "https://api.openai.com/v1", "custo_input_1M": "$0.25", "custo_output_1M": "$2.00", "tier": "🥈 Pro", "creditos": 2, "cor": "#1f77b4", "logo": "openai.jpg"},
-    {"empresa": "OpenAI", "modelo_id": "gpt-5", "modelo_nome": "GPT-5", "base_url": "https://api.openai.com/v1", "custo_input_1M": "$1.25", "custo_output_1M": "$10.00", "tier": "🥇 Elite", "creditos": 10, "cor": "#1f77b4", "logo": "openai.jpg"},
-    
-    {"empresa": "Google", "modelo_id": "gemini-2.5-flash-lite", "modelo_nome": "Gemini 2.5 Flash Lite", "base_url": "https://generativelanguage.googleapis.com/v1beta", "custo_input_1M": "$0.10", "custo_output_1M": "$0.40", "tier": "🥉 Básico", "creditos": 1, "cor": "#ff7f0e", "logo": "google.jpg"},
-    {"empresa": "Google", "modelo_id": "gemini-2.5-flash", "modelo_nome": "Gemini 2.5 Flash", "base_url": "https://generativelanguage.googleapis.com/v1beta", "custo_input_1M": "$0.30", "custo_output_1M": "$2.50", "tier": "🥈 Pro", "creditos": 2, "cor": "#ff7f0e", "logo": "google.jpg"},
-    {"empresa": "Google", "modelo_id": "gemini-2.5-pro", "modelo_nome": "Gemini 2.5 Pro", "base_url": "https://generativelanguage.googleapis.com/v1beta", "custo_input_1M": "$1.25", "custo_output_1M": "$10.00", "tier": "🥇 Elite", "creditos": 10, "cor": "#ff7f0e", "logo": "google.jpg"},
-    
-    {"empresa": "X.AI", "modelo_id": "grok-3-mini", "modelo_nome": "Grok 3 Mini", "base_url": "https://api.x.ai/v1", "custo_input_1M": "$0.30", "custo_output_1M": "$0.50", "tier": "🥉 Básico", "creditos": 1, "cor": "#2ca02c", "logo": "xai.jpg"},
-    {"empresa": "X.AI", "modelo_id": "grok-code-fast-1", "modelo_nome": "Grok Code Fast", "base_url": "https://api.x.ai/v1", "custo_input_1M": "$0.20", "custo_output_1M": "$1.50", "tier": "🥈 Pro", "creditos": 2, "cor": "#2ca02c", "logo": "xai.jpg"},
-    {"empresa": "X.AI", "modelo_id": "grok-4-0709", "modelo_nome": "Grok 4", "base_url": "https://api.x.ai/v1", "custo_input_1M": "$3.00", "custo_output_1M": "$15.00", "tier": "🥇 Elite", "creditos": 10, "cor": "#2ca02c", "logo": "xai.jpg"},
-    
-    {"empresa": "Anthropic", "modelo_id": "claude-3-5-haiku-20241022", "modelo_nome": "Claude 3.5 Haiku", "base_url": "https://api.anthropic.com/v1/", "custo_input_1M": "$0.80", "custo_output_1M": "$4.00", "tier": "🥈 Pro", "creditos": 2, "cor": "#d62728", "logo": "anthropic.jpg"},
-    {"empresa": "Anthropic", "modelo_id": "claude-sonnet-4-20250514", "modelo_nome": "Claude Sonnet 4", "base_url": "https://api.anthropic.com/v1/", "custo_input_1M": "$3.00", "custo_output_1M": "$15.00", "tier": "🥇 Elite", "creditos": 10, "cor": "#d62728", "logo": "anthropic.jpg"},
-    
-    {"empresa": "DeepSeek", "modelo_id": "deepseek-chat", "modelo_nome": "DeepSeek V3.1 Chat", "base_url": "https://api.deepseek.com", "custo_input_1M": "$0.56", "custo_output_1M": "$1.68", "tier": "🥈 Pro", "creditos": 2, "cor": "#9467bd", "logo": "deepseek.jpg"},
-    {"empresa": "DeepSeek", "modelo_id": "deepseek-reasoner", "modelo_nome": "DeepSeek V3.1 Reasoner", "base_url": "https://api.deepseek.com", "custo_input_1M": "$0.56", "custo_output_1M": "$1.68", "tier": "🥈 Pro", "creditos": 2, "cor": "#9467bd", "logo": "deepseek.jpg"},
-    
-    {"empresa": "Z.AI", "modelo_id": "z-ai/glm-4.5-air:free", "modelo_nome": "GLM 4.5 Air", "base_url": "https://openrouter.ai/api/v1", "custo_input_1M": "$0.14", "custo_output_1M": "$0.86", "tier": "🥈 Pro", "creditos": 2, "cor": "#8e44ad", "logo": "zai.jpg"},
-    
-    {"empresa": "OpenRouter", "modelo_id": "openrouter/sonoma-sky-alpha", "modelo_nome": "Sonoma Sky Alpha", "base_url": "https://openrouter.ai/api/v1", "custo_input_1M": "$3.00", "custo_output_1M": "$15.00", "tier": "🥇 Elite", "creditos": 10, "cor": "#e74c3c", "logo": "openrouter.jpg"},
-    {"empresa": "OpenRouter", "modelo_id": "openrouter/sonoma-dusk-alpha", "modelo_nome": "Sonoma Dusk Alpha", "base_url": "https://openrouter.ai/api/v1", "custo_input_1M": "$0.20", "custo_output_1M": "$1.50", "tier": "🥈 Pro", "creditos": 2, "cor": "#e74c3c", "logo": "openrouter.jpg"},
-    
-    {"empresa": "Qwen", "modelo_id": "qwen/qwen3-32b", "modelo_nome": "Qwen 3 32B", "base_url": "https://api.groq.com/openai/v1", "custo_input_1M": "$0.29", "custo_output_1M": "$0.59", "tier": "🥉 Básico", "creditos": 1, "cor": "#27ae60", "logo": "qwen.jpg"},
-    
-    {"empresa": "Moonshot AI", "modelo_id": "moonshotai/kimi-k2-instruct", "modelo_nome": "Kimi K2", "base_url": "https://api.groq.com/openai/v1", "custo_input_1M": "$1.00", "custo_output_1M": "$3.00", "tier": "🥈 Pro", "creditos": 2, "cor": "#f39c12", "logo": "moonshot.jpg"},
-    
-    {"empresa": "Mistral AI", "modelo_id": "mistralai/mistral-small-3.2-24b-instruct:free", "modelo_nome": "Mistral Small 3.2", "base_url": "https://openrouter.ai/api/v1", "custo_input_1M": "$0.10", "custo_output_1M": "$0.30", "tier": "🥉 Básico", "creditos": 1, "cor": "#3498db", "logo": "mistral.jpg"},
-    {"empresa": "Mistral AI", "modelo_id": "mistralai/mistral-nemo:free", "modelo_nome": "Mistral Nemo", "base_url": "https://openrouter.ai/api/v1", "custo_input_1M": "$0.15", "custo_output_1M": "$0.15", "tier": "🥉 Básico", "creditos": 1, "cor": "#3498db", "logo": "mistral.jpg"},
-    
-    {"empresa": "Meta", "modelo_id": "meta-llama/llama-4-maverick-17b-128e-instruct", "modelo_nome": "Llama 4 Maverick", "base_url": "https://api.groq.com/openai/v1", "custo_input_1M": "$0.20", "custo_output_1M": "$0.60", "tier": "🥈 Pro", "creditos": 2, "cor": "#9b59b6", "logo": "meta.jpg"},
-    {"empresa": "Meta", "modelo_id": "meta-llama/llama-4-scout-17b-16e-instruct", "modelo_nome": "Llama 4 Scout", "base_url": "https://api.groq.com/openai/v1", "custo_input_1M": "$0.11", "custo_output_1M": "$0.34", "tier": "🥉 Básico", "creditos": 1, "cor": "#9b59b6", "logo": "meta.jpg"},
-    
-    {"empresa": "OpenAI", "modelo_id": "openai/gpt-oss-120b", "modelo_nome": "GPT-OSS 120B", "base_url": "https://api.groq.com/openai/v1", "custo_input_1M": "$0.15", "custo_output_1M": "$0.75", "tier": "🥈 Pro", "creditos": 2, "cor": "#16a085", "logo": "openai.jpg"},
-    {"empresa": "OpenAI", "modelo_id": "openai/gpt-oss-20b", "modelo_nome": "GPT-OSS 20B", "base_url": "https://api.groq.com/openai/v1", "custo_input_1M": "$0.10", "custo_output_1M": "$0.50", "tier": "🥉 Básico", "creditos": 1, "cor": "#16a085", "logo": "openai.jpg"}
+    # OpenAI - família GPT-5.6.
+    _modelo(
+        empresa="OpenAI",
+        modelo_id="gpt-5.6-sol",
+        modelo_nome="GPT-5.6 Sol",
+        provedor="OpenAI",
+        base_url=OPENAI_BASE_URL,
+        api_tipo="openai_responses",
+        api_key_secret="OPENAI_API_KEY",
+        custo_input_1M="$5.00",
+        custo_output_1M="$30.00",
+        tier="Elite",
+        creditos=10,
+        contexto_tokens=1_050_000,
+        status="Atual",
+        fonte="OpenAI API docs",
+        logo="openai.jpg",
+        cor="#1f77b4",
+    ),
+    _modelo(
+        empresa="OpenAI",
+        modelo_id="gpt-5.6-terra",
+        modelo_nome="GPT-5.6 Terra",
+        provedor="OpenAI",
+        base_url=OPENAI_BASE_URL,
+        api_tipo="openai_responses",
+        api_key_secret="OPENAI_API_KEY",
+        custo_input_1M="$2.50",
+        custo_output_1M="$15.00",
+        tier="Pro",
+        creditos=5,
+        contexto_tokens=1_050_000,
+        status="Atual",
+        fonte="OpenAI API docs",
+        logo="openai.jpg",
+        cor="#1f77b4",
+    ),
+    _modelo(
+        empresa="OpenAI",
+        modelo_id="gpt-5.6-luna",
+        modelo_nome="GPT-5.6 Luna",
+        provedor="OpenAI",
+        base_url=OPENAI_BASE_URL,
+        api_tipo="openai_responses",
+        api_key_secret="OPENAI_API_KEY",
+        custo_input_1M="$1.00",
+        custo_output_1M="$6.00",
+        tier="Básico",
+        creditos=2,
+        contexto_tokens=1_050_000,
+        status="Atual",
+        fonte="OpenAI API docs",
+        logo="openai.jpg",
+        cor="#1f77b4",
+        selecionar_padrao=True,
+    ),
+    # Google Gemini - via endpoint OpenAI-compatible oficial.
+    _modelo(
+        empresa="Google",
+        modelo_id="gemini-3.5-flash",
+        modelo_nome="Gemini 3.5 Flash",
+        provedor="Google Gemini",
+        base_url=GEMINI_OPENAI_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GEMINI_API_KEY",
+        custo_input_1M="$1.50",
+        custo_output_1M="$9.00",
+        tier="Pro",
+        creditos=2,
+        contexto_tokens=None,
+        status="Stable",
+        fonte="Google Gemini API docs",
+        logo="google.JPG",
+        cor="#ff7f0e",
+    ),
+    _modelo(
+        empresa="Google",
+        modelo_id="gemini-3.1-flash-lite",
+        modelo_nome="Gemini 3.1 Flash-Lite",
+        provedor="Google Gemini",
+        base_url=GEMINI_OPENAI_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GEMINI_API_KEY",
+        custo_input_1M="$0.25",
+        custo_output_1M="$1.50",
+        tier="Básico",
+        creditos=1,
+        contexto_tokens=None,
+        status="Stable",
+        fonte="Google Gemini API docs",
+        logo="google.JPG",
+        cor="#ff7f0e",
+        selecionar_padrao=True,
+    ),
+    _modelo(
+        empresa="Google",
+        modelo_id="gemini-3.1-pro-preview",
+        modelo_nome="Gemini 3.1 Pro Preview",
+        provedor="Google Gemini",
+        base_url=GEMINI_OPENAI_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GEMINI_API_KEY",
+        custo_input_1M="$2.00",
+        custo_output_1M="$12.00",
+        tier="Preview",
+        creditos=4,
+        contexto_tokens=None,
+        status="Preview",
+        fonte="Google Gemini API docs",
+        logo="google.JPG",
+        cor="#ff7f0e",
+    ),
+
+    # Anthropic - Claude API nativa.
+    _modelo(
+        empresa="Anthropic",
+        modelo_id="claude-fable-5",
+        modelo_nome="Claude Fable 5",
+        provedor="Anthropic",
+        base_url="",
+        api_tipo="anthropic_messages",
+        api_key_secret="ANTHROPIC_API_KEY",
+        custo_input_1M="$10.00",
+        custo_output_1M="$50.00",
+        tier="Elite",
+        creditos=10,
+        contexto_tokens=1_000_000,
+        status="Atual",
+        fonte="Anthropic Claude Platform docs",
+        logo="anthropic.JPG",
+        cor="#d62728",
+    ),
+    _modelo(
+        empresa="Anthropic",
+        modelo_id="claude-sonnet-5",
+        modelo_nome="Claude Sonnet 5",
+        provedor="Anthropic",
+        base_url="",
+        api_tipo="anthropic_messages",
+        api_key_secret="ANTHROPIC_API_KEY",
+        custo_input_1M="$2.00",
+        custo_output_1M="$10.00",
+        tier="Pro",
+        creditos=2,
+        contexto_tokens=1_000_000,
+        status="Atual",
+        fonte="Anthropic Claude Platform docs",
+        logo="anthropic.JPG",
+        cor="#d62728",
+        observacao="Preço introdutório até 2026-08-31.",
+    ),
+    _modelo(
+        empresa="Anthropic",
+        modelo_id="claude-haiku-4-5-20251001",
+        modelo_nome="Claude Haiku 4.5",
+        provedor="Anthropic",
+        base_url="",
+        api_tipo="anthropic_messages",
+        api_key_secret="ANTHROPIC_API_KEY",
+        custo_input_1M="$1.00",
+        custo_output_1M="$5.00",
+        tier="Pro",
+        creditos=2,
+        contexto_tokens=200_000,
+        status="Atual",
+        fonte="Anthropic Claude Platform docs",
+        logo="anthropic.JPG",
+        cor="#d62728",
+    ),
+
+    # Groq - modelos de texto atuais da tabela oficial.
+    _modelo(
+        empresa="Meta",
+        modelo_id="llama-3.1-8b-instant",
+        modelo_nome="Llama 3.1 8B Instant",
+        provedor="Groq",
+        base_url=GROQ_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GROQ_API_KEY",
+        custo_input_1M="$0.05",
+        custo_output_1M="$0.08",
+        tier="Básico",
+        creditos=1,
+        contexto_tokens=131_072,
+        status="Produção",
+        fonte="Groq docs",
+        logo="meta.JPG",
+        cor="#9b59b6",
+    ),
+    _modelo(
+        empresa="Meta",
+        modelo_id="llama-3.3-70b-versatile",
+        modelo_nome="Llama 3.3 70B Versatile",
+        provedor="Groq",
+        base_url=GROQ_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GROQ_API_KEY",
+        custo_input_1M="$0.59",
+        custo_output_1M="$0.79",
+        tier="Pro",
+        creditos=2,
+        contexto_tokens=131_072,
+        status="Produção",
+        fonte="Groq docs",
+        logo="meta.JPG",
+        cor="#9b59b6",
+    ),
+    _modelo(
+        empresa="OpenAI",
+        modelo_id="openai/gpt-oss-120b",
+        modelo_nome="GPT-OSS 120B",
+        provedor="Groq",
+        base_url=GROQ_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GROQ_API_KEY",
+        custo_input_1M="$0.15",
+        custo_output_1M="$0.60",
+        tier="Básico",
+        creditos=1,
+        contexto_tokens=131_072,
+        status="Produção",
+        fonte="Groq docs",
+        logo="openai.jpg",
+        cor="#16a085",
+        selecionar_padrao=True,
+    ),
+    _modelo(
+        empresa="OpenAI",
+        modelo_id="openai/gpt-oss-20b",
+        modelo_nome="GPT-OSS 20B",
+        provedor="Groq",
+        base_url=GROQ_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GROQ_API_KEY",
+        custo_input_1M="$0.075",
+        custo_output_1M="$0.30",
+        tier="Básico",
+        creditos=1,
+        contexto_tokens=131_072,
+        status="Produção",
+        fonte="Groq docs",
+        logo="openai.jpg",
+        cor="#16a085",
+    ),
+    _modelo(
+        empresa="Meta",
+        modelo_id="meta-llama/llama-4-scout-17b-16e-instruct",
+        modelo_nome="Llama 4 Scout 17B 16E",
+        provedor="Groq",
+        base_url=GROQ_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GROQ_API_KEY",
+        custo_input_1M="$0.11",
+        custo_output_1M="$0.34",
+        tier="Preview",
+        creditos=1,
+        contexto_tokens=131_072,
+        status="Preview",
+        fonte="Groq docs",
+        logo="meta.JPG",
+        cor="#9b59b6",
+    ),
+    _modelo(
+        empresa="Qwen",
+        modelo_id="qwen/qwen3-32b",
+        modelo_nome="Qwen3 32B",
+        provedor="Groq",
+        base_url=GROQ_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GROQ_API_KEY",
+        custo_input_1M="$0.29",
+        custo_output_1M="$0.59",
+        tier="Preview",
+        creditos=1,
+        contexto_tokens=131_072,
+        status="Preview",
+        fonte="Groq docs",
+        logo="qwen.JPG",
+        cor="#27ae60",
+    ),
+    _modelo(
+        empresa="Qwen",
+        modelo_id="qwen/qwen3.6-27b",
+        modelo_nome="Qwen3.6 27B",
+        provedor="Groq",
+        base_url=GROQ_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="GROQ_API_KEY",
+        custo_input_1M="$0.60",
+        custo_output_1M="$3.00",
+        tier="Preview",
+        creditos=2,
+        contexto_tokens=131_072,
+        status="Preview",
+        fonte="Groq docs",
+        logo="qwen.JPG",
+        cor="#27ae60",
+    ),
+
+    # X.AI - modelos atuais retornados pelo endpoint /v1/models.
+    _modelo(
+        empresa="X.AI",
+        modelo_id="grok-4.3",
+        modelo_nome="Grok 4.3",
+        provedor="X.AI",
+        base_url=XAI_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="XAI_API_KEY",
+        custo_input_1M="$12.50",
+        custo_output_1M="$25.00",
+        tier="Elite",
+        creditos=10,
+        contexto_tokens=1_000_000,
+        status="Atual",
+        fonte="X.AI models API",
+        logo="xai.JPG",
+        cor="#2ca02c",
+    ),
+    _modelo(
+        empresa="X.AI",
+        modelo_id="grok-4.20-0309-reasoning",
+        modelo_nome="Grok 4.20 Reasoning",
+        provedor="X.AI",
+        base_url=XAI_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="XAI_API_KEY",
+        custo_input_1M="$12.50",
+        custo_output_1M="$25.00",
+        tier="Elite",
+        creditos=10,
+        contexto_tokens=1_000_000,
+        status="Atual",
+        fonte="X.AI models API",
+        logo="xai.JPG",
+        cor="#2ca02c",
+    ),
+    _modelo(
+        empresa="X.AI",
+        modelo_id="grok-4.20-0309-non-reasoning",
+        modelo_nome="Grok 4.20 Non-Reasoning",
+        provedor="X.AI",
+        base_url=XAI_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="XAI_API_KEY",
+        custo_input_1M="$12.50",
+        custo_output_1M="$25.00",
+        tier="Elite",
+        creditos=10,
+        contexto_tokens=1_000_000,
+        status="Atual",
+        fonte="X.AI models API",
+        logo="xai.JPG",
+        cor="#2ca02c",
+    ),
+    _modelo(
+        empresa="X.AI",
+        modelo_id="grok-build-0.1",
+        modelo_nome="Grok Build 0.1",
+        provedor="X.AI",
+        base_url=XAI_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="XAI_API_KEY",
+        custo_input_1M="$10.00",
+        custo_output_1M="$20.00",
+        tier="Pro",
+        creditos=4,
+        contexto_tokens=256_000,
+        status="Atual",
+        fonte="X.AI models API",
+        logo="xai.JPG",
+        cor="#2ca02c",
+    ),
+
+    # DeepSeek - modelos atuais retornados pelo endpoint /models.
+    _modelo(
+        empresa="DeepSeek",
+        modelo_id="deepseek-v4-flash",
+        modelo_nome="DeepSeek V4 Flash",
+        provedor="DeepSeek",
+        base_url=DEEPSEEK_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="DEEPSEEK_API_KEY",
+        custo_input_1M="N/D",
+        custo_output_1M="N/D",
+        tier="Básico",
+        creditos=1,
+        contexto_tokens=None,
+        status="Atual",
+        fonte="DeepSeek models API",
+        logo="deepseek.JPG",
+        cor="#9467bd",
+    ),
+    _modelo(
+        empresa="DeepSeek",
+        modelo_id="deepseek-v4-pro",
+        modelo_nome="DeepSeek V4 Pro",
+        provedor="DeepSeek",
+        base_url=DEEPSEEK_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="DEEPSEEK_API_KEY",
+        custo_input_1M="N/D",
+        custo_output_1M="N/D",
+        tier="Pro",
+        creditos=2,
+        contexto_tokens=None,
+        status="Atual",
+        fonte="DeepSeek models API",
+        logo="deepseek.JPG",
+        cor="#9467bd",
+    ),
 ]
 
-# Criar DataFrame
+
+openrouter_free_models = [
+    ("Tencent", "tencent/hy3:free", "Tencent Hy3", 262_144, "2026-07-21", "2026-07-06"),
+    ("Poolside", "poolside/laguna-xs-2.1:free", "Laguna XS 2.1", 262_144, "", "2026-07-02"),
+    ("Cohere", "cohere/north-mini-code:free", "North Mini Code", 256_000, "", "2026-06-17"),
+    ("NVIDIA", "nvidia/nemotron-3.5-content-safety:free", "Nemotron 3.5 Content Safety", 128_000, "", "2026-06-04"),
+    ("NVIDIA", "nvidia/nemotron-3-ultra-550b-a55b:free", "Nemotron 3 Ultra", 1_000_000, "", "2026-06-04"),
+    ("NVIDIA", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "Nemotron 3 Nano Omni", 256_000, "", "2026-04-28"),
+    ("Poolside", "poolside/laguna-xs.2:free", "Laguna XS.2", 262_144, "2026-07-09", "2026-04-28"),
+    ("Poolside", "poolside/laguna-m.1:free", "Laguna M.1", 262_144, "", "2026-04-28"),
+    ("Google", "google/gemma-4-26b-a4b-it:free", "Gemma 4 26B A4B", 262_144, "", "2026-04-03"),
+    ("Google", "google/gemma-4-31b-it:free", "Gemma 4 31B", 262_144, "", "2026-04-02"),
+    ("NVIDIA", "nvidia/nemotron-3-super-120b-a12b:free", "Nemotron 3 Super", 1_000_000, "", "2026-03-11"),
+    ("LiquidAI", "liquid/lfm-2.5-1.2b-thinking:free", "LFM2.5 1.2B Thinking", 32_768, "", "2026-01-20"),
+    ("LiquidAI", "liquid/lfm-2.5-1.2b-instruct:free", "LFM2.5 1.2B Instruct", 32_768, "", "2026-01-20"),
+    ("NVIDIA", "nvidia/nemotron-3-nano-30b-a3b:free", "Nemotron 3 Nano 30B A3B", 256_000, "", "2025-12-14"),
+    ("NVIDIA", "nvidia/nemotron-nano-12b-v2-vl:free", "Nemotron Nano 12B 2 VL", 128_000, "", "2025-10-28"),
+    ("Qwen", "qwen/qwen3-next-80b-a3b-instruct:free", "Qwen3 Next 80B A3B Instruct", 262_144, "", "2025-09-11"),
+    ("NVIDIA", "nvidia/nemotron-nano-9b-v2:free", "Nemotron Nano 9B V2", 128_000, "", "2025-09-05"),
+    ("OpenAI", "openai/gpt-oss-120b:free", "GPT-OSS 120B", 131_072, "", "2025-08-05"),
+    ("OpenAI", "openai/gpt-oss-20b:free", "GPT-OSS 20B", 131_072, "", "2025-08-05"),
+    ("Qwen", "qwen/qwen3-coder:free", "Qwen3 Coder 480B A35B", 1_048_576, "", "2025-07-23"),
+    ("Venice", "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", "Venice Uncensored", 32_768, "", "2025-07-09"),
+    ("Meta", "meta-llama/llama-3.3-70b-instruct:free", "Llama 3.3 70B Instruct", 131_072, "", "2024-12-06"),
+    ("Meta", "meta-llama/llama-3.2-3b-instruct:free", "Llama 3.2 3B Instruct", 131_072, "", "2024-09-25"),
+    ("Nous", "nousresearch/hermes-3-llama-3.1-405b:free", "Hermes 3 Llama 3.1 405B", 131_072, "", "2024-08-16"),
+]
+
+for empresa, modelo_id, nome, contexto, expira, criado in openrouter_free_models:
+    modelos_db.append(
+        _modelo(
+            empresa=empresa,
+            modelo_id=modelo_id,
+            modelo_nome=nome,
+            provedor="OpenRouter Free",
+            base_url=OPENROUTER_BASE_URL,
+            api_tipo="chat_completions",
+            api_key_secret="OPENROUTER_API_KEY",
+            custo_input_1M="$0.00",
+            custo_output_1M="$0.00",
+            tier="Free",
+            creditos=0,
+            contexto_tokens=contexto,
+            status="Free",
+            fonte="OpenRouter public models API",
+            logo="openrouter.JPG",
+            cor="#e74c3c",
+            observacao=(
+                f"Criado no OpenRouter em {criado}."
+                + (f" Expira em {expira}." if expira else "")
+            ),
+            selecionar_padrao=modelo_id
+            in {
+                "tencent/hy3:free",
+                "poolside/laguna-xs-2.1:free",
+                "openai/gpt-oss-120b:free",
+                "qwen/qwen3-coder:free",
+            },
+        )
+    )
+
+
 df_modelos = pd.DataFrame(modelos_db)
 
-# Função para obter informações de um modelo específico
-def obter_info_modelo(modelo_id):
-    """Retorna informações de um modelo específico"""
-    modelo = df_modelos[df_modelos['modelo_id'] == modelo_id]
+
+def obter_info_modelo(uid_ou_modelo_id):
+    """Retorna informacoes de um modelo pelo uid ou pelo modelo_id."""
+    modelo = df_modelos[
+        (df_modelos["uid"] == uid_ou_modelo_id)
+        | (df_modelos["modelo_id"] == uid_ou_modelo_id)
+    ]
     if not modelo.empty:
         return modelo.iloc[0].to_dict()
     return None
 
-# Função para obter modelos por empresa
-def obter_modelos_empresa(empresa):
-    """Retorna todos os modelos de uma empresa"""
-    return df_modelos[df_modelos['empresa'] == empresa]
 
-# Função para obter modelos por tier
+def obter_modelos_empresa(empresa):
+    """Retorna todos os modelos de uma empresa."""
+    return df_modelos[df_modelos["empresa"] == empresa]
+
+
 def obter_modelos_tier(tier):
-    """Retorna todos os modelos de um tier específico"""
-    return df_modelos[df_modelos['tier'] == tier]
+    """Retorna todos os modelos de um tier especifico."""
+    return df_modelos[df_modelos["tier"] == tier]
