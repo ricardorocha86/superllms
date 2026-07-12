@@ -1438,14 +1438,6 @@ taxa_acerto = (sample["NPS"] == sample["Classificação"]).mean()""",
 def main(): 
     with st.sidebar:
         st.markdown("## Configurações")
-        
-        # --- INÍCIO DA MUDANÇA: Campo para a chave ---
-        user_api_key = st.text_input(
-            "Sua Google API Key",
-            type="password",
-            help="Obtenha sua chave gratuita em https://aistudio.google.com/app/apikey"
-        )
-        # --- FIM DA MUDANÇA ---
 
         model_name = st.selectbox(
             "Modelo de embedding",
@@ -1466,13 +1458,16 @@ def main():
         )
         st.write("---")
 
-    # --- INÍCIO DA MUDANÇA: Validação e Cliente ---
-    if not user_api_key:
-        st.warning("👈 Por favor, insira sua Google API Key na barra lateral para liberar o laboratório.")
+    try:
+        api_key = str(st.secrets.get("GEMINI_API_KEY", "") or "").strip()
+    except Exception:
+        api_key = ""
+
+    if not api_key:
+        st.warning("Configure GEMINI_API_KEY em .streamlit/secrets.toml para liberar o laboratório.")
         st.stop()
 
-    client = get_client(user_api_key)
-    # --- FIM DA MUDANÇA ---
+    client = get_client(api_key)
 
     tabs = st.tabs(
         [
