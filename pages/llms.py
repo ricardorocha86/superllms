@@ -15,7 +15,7 @@ try:
 except ImportError:  # O app mostra um erro claro se um modelo Anthropic for usado.
     AsyncAnthropic = None
 
-from modelos import DATA_ATUALIZACAO, df_modelos
+from modelos import DATA_ATUALIZACAO, df_modelos, resumo_openrouter
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -446,7 +446,7 @@ with st.sidebar:
     st.divider()
     st.markdown("### Base de modelos")
     st.caption(f"Atualizada em {DATA_ATUALIZACAO}.")
-    st.caption("OpenRouter Free vem do endpoint público /api/v1/models.")
+    st.caption(resumo_openrouter())
 
     with st.expander("Chaves esperadas"):
         st.code(

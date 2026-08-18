@@ -1,0 +1,12 @@
+# Segredos: nunca versionar (contém chaves de API vivas).
+.streamlit/secrets.toml
+.env
+
+# Cache local do catálogo do OpenRouter.
+.cache/
+
+__pycache__/
+*.py[cod]
+
+streamlit.err.log
+streamlit.out.log

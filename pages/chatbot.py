@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ai_helpers import generate_text, get_secret
+import historico
+from ai_helpers import generate_text_detalhado, get_secret
 from modelos import DATA_ATUALIZACAO, df_modelos
 from personas import PERSONALIDADES, construir_prompt_final
 
@@ -104,13 +105,15 @@ if prompt:
     with st.chat_message("assistant", avatar=AVATARES["assistant"]):
         with st.spinner("Pensando...", show_time=True):
             try:
-                resposta = generate_text(
+                resultado = generate_text_detalhado(
                     model_info=modelo_info,
                     api_key=api_key,
                     messages=mensagens_para_api,
                     instructions="",
                     temperature=None,
                 )
+                resposta = resultado["texto"]
+                historico.registrar(resultado["uso"], origem="Chatbot")
                 if not resposta:
                     resposta = "O modelo não retornou texto. Tente novamente com outro modelo."
                 st.markdown(resposta)

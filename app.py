@@ -21,6 +21,7 @@ pages = {
     ],
     "Referência": [
         st.Page("pages/sobre_modelos.py", title="Modelos e Provedores", icon=":material/menu_book:"),
+        st.Page("pages/historico_uso.py", title="Histórico de Uso", icon=":material/receipt_long:"),
     ],
 }
 

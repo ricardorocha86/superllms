@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from modelos import DATA_ATUALIZACAO, df_modelos
+from modelos import DATA_ATUALIZACAO, df_modelos, resumo_openrouter
 
 
 def formatar_contexto(valor):
@@ -16,7 +16,7 @@ def formatar_contexto(valor):
 
 
 st.title("Sobre os Modelos")
-st.caption(f"Base de modelos atualizada em {DATA_ATUALIZACAO}.")
+st.caption(f"Provedores diretos atualizados em {DATA_ATUALIZACAO}. {resumo_openrouter()}")
 
 st.markdown(
     """

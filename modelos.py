@@ -9,6 +9,8 @@
 # - X.AI models API: https://api.x.ai/v1/models
 # - DeepSeek models API: https://api.deepseek.com/models
 
+from datetime import datetime, timezone
+
 import pandas as pd
 
 
@@ -480,66 +482,206 @@ modelos_db = [
 ]
 
 
-openrouter_free_models = [
-    ("Tencent", "tencent/hy3:free", "Tencent Hy3", 262_144, "2026-07-21", "2026-07-06"),
-    ("Poolside", "poolside/laguna-xs-2.1:free", "Laguna XS 2.1", 262_144, "", "2026-07-02"),
+# ---------------------------------------------------------------------------
+# OpenRouter Free: carregado ao vivo de /api/v1/models.
+#
+# A lista costumava ser fixa aqui, e envelhecia mal: modelos ":free" entram e
+# saem do catálogo toda semana, então o app acabava oferecendo model_ids que já
+# retornavam 404. Agora o catálogo vem da API (com cache em disco de 6h) e o
+# snapshot abaixo é só a rede de segurança para quando não houver rede nem cache.
+# ---------------------------------------------------------------------------
+
+# Ordem de preferência para o que já vem marcado no Laboratório. Só entram os
+# que estiverem realmente vivos no momento do carregamento.
+OPENROUTER_PREFERIDOS = (
+    # O roteador vem primeiro: ele sorteia entre os gratuitos que estão de pé,
+    # então é o que menos esbarra no rate limit compartilhado do free tier.
+    "openrouter/free",
+    "z-ai/glm-5.2:free",
+    "poolside/laguna-s-2.1:free",
+    "openai/gpt-oss-20b:free",
+)
+OPENROUTER_MAX_PADRAO = 4
+
+# Snapshot verificado em 2026-08-18 contra /api/v1/models.
+# (empresa, modelo_id, nome, contexto, expira_em, criado_em)
+OPENROUTER_FREE_SNAPSHOT = [
+    ("OpenRouter", "openrouter/free", "Free Models Router", 200_000, "", ""),
+    ("Dots Studio", "dots-studio/dots-3-note-preview:free", "Dots3-Note Preview", 512_000, "", "2026-08-14"),
+    ("LiquidAI", "liquid/lfm-2.5-2.6b:free", "LFM2.5-2.6B", 128_000, "", "2026-08-11"),
+    ("NVIDIA", "nvidia/nemotron-3.5-lightning:free", "Nemotron 3.5 Lightning", 1_000_000, "", "2026-08-11"),
+    ("Poolside", "poolside/laguna-s-2.1:free", "Laguna S 2.1", 262_144, "", "2026-07-21"),
+    ("Poolside", "poolside/laguna-xs-2.1:free", "Laguna XS 2.1", 262_144, "", "2026-06-25"),
     ("Cohere", "cohere/north-mini-code:free", "North Mini Code", 256_000, "", "2026-06-17"),
+    ("Z.ai", "z-ai/glm-5.2:free", "GLM 5.2", 256_000, "", "2026-06-16"),
     ("NVIDIA", "nvidia/nemotron-3.5-content-safety:free", "Nemotron 3.5 Content Safety", 128_000, "", "2026-06-04"),
     ("NVIDIA", "nvidia/nemotron-3-ultra-550b-a55b:free", "Nemotron 3 Ultra", 1_000_000, "", "2026-06-04"),
     ("NVIDIA", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "Nemotron 3 Nano Omni", 256_000, "", "2026-04-28"),
-    ("Poolside", "poolside/laguna-xs.2:free", "Laguna XS.2", 262_144, "2026-07-09", "2026-04-28"),
-    ("Poolside", "poolside/laguna-m.1:free", "Laguna M.1", 262_144, "", "2026-04-28"),
     ("Google", "google/gemma-4-26b-a4b-it:free", "Gemma 4 26B A4B", 262_144, "", "2026-04-03"),
     ("Google", "google/gemma-4-31b-it:free", "Gemma 4 31B", 262_144, "", "2026-04-02"),
-    ("NVIDIA", "nvidia/nemotron-3-super-120b-a12b:free", "Nemotron 3 Super", 1_000_000, "", "2026-03-11"),
-    ("LiquidAI", "liquid/lfm-2.5-1.2b-thinking:free", "LFM2.5 1.2B Thinking", 32_768, "", "2026-01-20"),
-    ("LiquidAI", "liquid/lfm-2.5-1.2b-instruct:free", "LFM2.5 1.2B Instruct", 32_768, "", "2026-01-20"),
+    ("NVIDIA", "nvidia/nemotron-3-super-120b-a12b:free", "Nemotron 3 Super", 262_144, "", "2026-03-11"),
     ("NVIDIA", "nvidia/nemotron-3-nano-30b-a3b:free", "Nemotron 3 Nano 30B A3B", 256_000, "", "2025-12-14"),
-    ("NVIDIA", "nvidia/nemotron-nano-12b-v2-vl:free", "Nemotron Nano 12B 2 VL", 128_000, "", "2025-10-28"),
-    ("Qwen", "qwen/qwen3-next-80b-a3b-instruct:free", "Qwen3 Next 80B A3B Instruct", 262_144, "", "2025-09-11"),
+    ("NVIDIA", "nvidia/nemotron-nano-12b-v2-vl:free", "Nemotron Nano 12B 2 VL", 128_000, "2026-08-24", "2025-10-28"),
     ("NVIDIA", "nvidia/nemotron-nano-9b-v2:free", "Nemotron Nano 9B V2", 128_000, "", "2025-09-05"),
-    ("OpenAI", "openai/gpt-oss-120b:free", "GPT-OSS 120B", 131_072, "", "2025-08-05"),
-    ("OpenAI", "openai/gpt-oss-20b:free", "GPT-OSS 20B", 131_072, "", "2025-08-05"),
-    ("Qwen", "qwen/qwen3-coder:free", "Qwen3 Coder 480B A35B", 1_048_576, "", "2025-07-23"),
-    ("Venice", "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", "Venice Uncensored", 32_768, "", "2025-07-09"),
-    ("Meta", "meta-llama/llama-3.3-70b-instruct:free", "Llama 3.3 70B Instruct", 131_072, "", "2024-12-06"),
-    ("Meta", "meta-llama/llama-3.2-3b-instruct:free", "Llama 3.2 3B Instruct", 131_072, "", "2024-09-25"),
-    ("Nous", "nousresearch/hermes-3-llama-3.1-405b:free", "Hermes 3 Llama 3.1 405B", 131_072, "", "2024-08-16"),
+    ("OpenAI", "openai/gpt-oss-20b:free", "gpt-oss-20b", 131_072, "", "2025-08-05"),
 ]
 
-for empresa, modelo_id, nome, contexto, expira, criado in openrouter_free_models:
-    modelos_db.append(
-        _modelo(
-            empresa=empresa,
-            modelo_id=modelo_id,
-            modelo_nome=nome,
-            provedor="OpenRouter Free",
-            base_url=OPENROUTER_BASE_URL,
-            api_tipo="chat_completions",
-            api_key_secret="OPENROUTER_API_KEY",
-            custo_input_1M="$0.00",
-            custo_output_1M="$0.00",
-            tier="Free",
-            creditos=0,
-            contexto_tokens=contexto,
-            status="Free",
-            fonte="OpenRouter public models API",
-            logo="openrouter.JPG",
-            cor="#e74c3c",
-            observacao=(
-                f"Criado no OpenRouter em {criado}."
-                + (f" Expira em {expira}." if expira else "")
-            ),
-            selecionar_padrao=modelo_id
-            in {
-                "tencent/hy3:free",
-                "poolside/laguna-xs-2.1:free",
-                "openai/gpt-oss-120b:free",
-                "qwen/qwen3-coder:free",
-            },
-        )
+# Os logos são por empresa e nem toda empresa do OpenRouter tem um arquivo.
+LOGOS_POR_EMPRESA = {
+    "anthropic": "anthropic.JPG",
+    "deepseek": "deepseek.JPG",
+    "google": "google.JPG",
+    "meta": "meta.JPG",
+    "meta-llama": "meta.JPG",
+    "mistral": "mistral.JPG",
+    "mistralai": "mistral.JPG",
+    "moonshotai": "moonshot.jpg",
+    "openai": "openai.jpg",
+    "qwen": "qwen.JPG",
+    "x.ai": "xai.JPG",
+    "z.ai": "zai.JPG",
+}
+
+
+def _logo_da_empresa(empresa):
+    return LOGOS_POR_EMPRESA.get(str(empresa).strip().lower(), "openrouter.JPG")
+
+
+def _observacao_openrouter(criado, expira, indices=None):
+    partes = []
+    if criado:
+        partes.append(f"Criado no OpenRouter em {criado}.")
+    if expira:
+        partes.append(f"Expira em {expira}.")
+    if indices:
+        rotulos = [
+            ("Inteligência", indices.get("indice_inteligencia")),
+            ("Código", indices.get("indice_codigo")),
+            ("Agêntico", indices.get("indice_agentico")),
+        ]
+        marcados = [f"{rotulo} {valor:g}" for rotulo, valor in rotulos if valor is not None]
+        if marcados:
+            partes.append("Artificial Analysis: " + ", ".join(marcados) + ".")
+    return " ".join(partes)
+
+
+def _modelo_openrouter(
+    *, empresa, modelo_id, nome, contexto, observacao, custo_input="$0.00", custo_output="$0.00"
+):
+    return _modelo(
+        empresa=empresa,
+        modelo_id=modelo_id,
+        modelo_nome=nome,
+        provedor="OpenRouter Free",
+        base_url=OPENROUTER_BASE_URL,
+        api_tipo="chat_completions",
+        api_key_secret="OPENROUTER_API_KEY",
+        custo_input_1M=custo_input,
+        custo_output_1M=custo_output,
+        tier="Free",
+        creditos=0,
+        contexto_tokens=contexto,
+        status="Free",
+        fonte="OpenRouter public models API",
+        logo=_logo_da_empresa(empresa),
+        cor="#e74c3c",
+        observacao=observacao,
     )
 
+
+def _marcar_padroes(modelos):
+    """Pré-seleciona os preferidos que existirem na lista carregada."""
+    disponiveis = {modelo["modelo_id"] for modelo in modelos}
+    padroes = [
+        modelo_id for modelo_id in OPENROUTER_PREFERIDOS if modelo_id in disponiveis
+    ][:OPENROUTER_MAX_PADRAO]
+    if not padroes and modelos:
+        padroes = [modelos[0]["modelo_id"]]
+    for modelo in modelos:
+        modelo["selecionar_padrao"] = modelo["modelo_id"] in padroes
+    return modelos
+
+
+def _carregar_openrouter_free():
+    """Monta a fatia OpenRouter do catálogo, ao vivo quando possível."""
+    try:
+        from openrouter_api import listar_modelos, modelos_gratuitos, normalizar
+
+        resultado = listar_modelos()
+        brutos = modelos_gratuitos(resultado.get("modelos") or [])
+    except Exception as exc:  # rede, import, JSON malformado: cai no snapshot.
+        resultado = {"origem": "indisponivel", "erro": f"{exc.__class__.__name__}: {exc}"}
+        brutos = []
+
+    if not brutos:
+        modelos = [
+            _modelo_openrouter(
+                empresa=empresa,
+                modelo_id=modelo_id,
+                nome=nome,
+                contexto=contexto,
+                observacao=_observacao_openrouter(criado, expira),
+            )
+            for empresa, modelo_id, nome, contexto, expira, criado in OPENROUTER_FREE_SNAPSHOT
+        ]
+        status = {
+            "origem": "snapshot",
+            "erro": resultado.get("erro", ""),
+            "buscado_em": 0.0,
+            "total": len(modelos),
+        }
+        return _marcar_padroes(modelos), status
+
+    modelos = []
+    for bruto in brutos:
+        dados = normalizar(bruto)
+        modelos.append(
+            _modelo_openrouter(
+                empresa=dados["autor"],
+                modelo_id=dados["id"],
+                nome=dados["nome"],
+                contexto=dados["contexto_tokens"],
+                custo_input=dados["custo_input_1M"],
+                custo_output=dados["custo_output_1M"],
+                observacao=_observacao_openrouter(
+                    dados["criado_em"], dados["expira_em"], dados
+                ),
+            )
+        )
+
+    _marcar_padroes(modelos)
+
+    status = {
+        "origem": resultado.get("origem", "api"),
+        "erro": resultado.get("erro", ""),
+        "buscado_em": resultado.get("buscado_em", 0.0),
+        "total": len(modelos),
+    }
+    return modelos, status
+
+
+modelos_openrouter, OPENROUTER_STATUS = _carregar_openrouter_free()
+modelos_db.extend(modelos_openrouter)
+
+
+def resumo_openrouter():
+    """Frase curta sobre a procedência da fatia OpenRouter, para as legendas."""
+    origem = OPENROUTER_STATUS.get("origem")
+    total = OPENROUTER_STATUS.get("total", 0)
+    if origem == "api":
+        return f"OpenRouter Free: {total} modelos lidos ao vivo de /api/v1/models."
+    if origem == "cache":
+        momento = OPENROUTER_STATUS.get("buscado_em") or 0
+        quando = (
+            datetime.fromtimestamp(momento, tz=timezone.utc).strftime("%d/%m %H:%M UTC")
+            if momento
+            else "recentemente"
+        )
+        return f"OpenRouter Free: {total} modelos do cache local (lido em {quando})."
+    return (
+        f"OpenRouter Free: {total} modelos do snapshot embutido — "
+        "não foi possível consultar /api/v1/models."
+    )
 
 df_modelos = pd.DataFrame(modelos_db)
 

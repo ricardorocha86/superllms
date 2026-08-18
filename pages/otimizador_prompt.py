@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ai_helpers import generate_text, get_secret
+import historico
+from ai_helpers import generate_text_detalhado, get_secret
 
 
 def montar_prompt_local(pedido: str, contexto: str, publico: str, formato: str, restricoes: str, idioma: str) -> str:
@@ -68,12 +69,14 @@ Retorne somente o texto do novo prompt, sem título, explicação, análise, lis
 Não use bloco de código Markdown.
 Se alguma informação estiver ausente, use um marcador [preencher] em vez de inventar.
 Escreva o prompt em português do Brasil."""
-    return generate_text(
+    resultado = generate_text_detalhado(
         model_info=model_info,
         api_key=get_secret("OPENAI_API_KEY"),
         messages=[{"role": "user", "content": briefing}],
         instructions=instructions,
     )
+    historico.registrar(resultado["uso"], origem="Engenharia de Prompt")
+    return resultado["texto"]
 
 
 st.title("Engenharia de Prompt e de Contexto")
