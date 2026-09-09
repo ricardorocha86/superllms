@@ -1,4 +1,4 @@
-"""Playground visual para a API Images com GPT Image 2."""
+"""Playground visual para a API Images com GPT Image 2.5."""
 
 import base64
 import time
@@ -7,22 +7,19 @@ import streamlit as st
 from openai import OpenAI
 
 
-MODELO = "gpt-image-2"
+MODELOS = {
+    "GPT Image 2.5 Flare": "gpt-image-2.5-flare",
+    "GPT Image 2.5 Sunburst": "gpt-image-2.5-sunburst",
+}
 DOCS_URL = "https://developers.openai.com/api/docs/guides/image-generation"
-MODELO_URL = "https://developers.openai.com/api/docs/models/gpt-image-2"
-CALCULADORA_URL = "https://developers.openai.com/api/docs/guides/image-generation#calculating-costs"
+CALCULADORA_URL = "https://developers.openai.com/api/docs/guides/image-generation#cost-and-latency"
 CUSTO_PARCIAL_USD = 0.003  # 100 image output tokens a US$ 30 / 1M tokens.
 PRECO_TEXTO_INPUT_1M = 5.00
 PRECO_IMAGEM_INPUT_1M = 8.00
 PRECO_IMAGEM_OUTPUT_1M = 30.00
 
-# Valores de saída por imagem da tabela oficial em 2026-07-11. Eles não incluem
-# tokens do prompt nem das imagens de referência em edições.
-PRECOS_SAIDA = {
-    "1024x1024": {"low": 0.006, "medium": 0.053, "high": 0.211},
-    "1024x1536": {"low": 0.005, "medium": 0.041, "high": 0.165},
-    "1536x1024": {"low": 0.005, "medium": 0.041, "high": 0.165},
-}
+# Tarifas oficiais verificadas em 2026-09-08, iguais para Flare e Sunburst.
+# O consumo por imagem varia: não reutilizar a tabela de saída do GPT Image 2.
 
 TAMANHOS_POPULARES = {
     "Auto (o modelo decide)": "auto",
@@ -59,13 +56,6 @@ def tamanho_valido(largura, altura):
     if not 655_360 <= pixels <= 8_294_400:
         return False, "A imagem deve ter entre 655.360 e 8.294.400 pixels."
     return True, ""
-
-
-def estimar_custo_saida(tamanho, qualidade, quantidade):
-    if tamanho in PRECOS_SAIDA and qualidade in {"low", "medium", "high"}:
-        unitario = PRECOS_SAIDA[tamanho][qualidade]
-        return unitario, unitario * quantidade
-    return None, None
 
 
 def calcular_custo_por_tokens(uso, quantidade_parciais):
@@ -113,8 +103,15 @@ def resumo_erro_api(exc):
     return " | ".join(partes)
 
 
-st.title("Playground GPT Image 2")
+st.title("Playground GPT Image 2.5")
 st.caption("Gere, edite e compare imagens usando a API oficial da OpenAI.")
+modelo_nome = st.selectbox("Modelo de imagem", list(MODELOS))
+MODELO = MODELOS[modelo_nome]
+MODELO_URL = f"https://developers.openai.com/api/docs/models/{MODELO}"
+st.caption(
+    "Flare prioriza velocidade para criar e iterar. Sunburst oferece maior precisão "
+    "para trabalhos detalhados, com geração mais demorada."
+)
 
 with st.sidebar:
     st.header("Conexão")
@@ -140,12 +137,17 @@ with st.sidebar:
                 finally:
                     client.close()
                 st.success(f"Conexão e autenticação OK ({len(modelos.data)} modelos recebidos).")
+                if MODELO not in {item.id for item in modelos.data}:
+                    st.warning(
+                        f"{modelo_nome} não apareceu entre os modelos disponíveis para esta chave. "
+                        "Confira a verificação da organização e as permissões do projeto na OpenAI."
+                    )
             except Exception as exc:
                 st.error("Não foi possível conectar à API.")
                 st.code(resumo_erro_api(exc), language="text")
 
     st.divider()
-    st.caption("Modelo: `gpt-image-2`")
+    st.caption(f"Modelo: `{MODELO}`")
     st.caption("A API pode exigir verificação da organização antes do primeiro uso.")
 
 aba_playground, aba_custos, aba_referencias = st.tabs(
@@ -178,7 +180,7 @@ with aba_playground:
                 "Imagens de referência",
                 type=["png", "jpg", "jpeg", "webp"],
                 accept_multiple_files=True,
-                help="Envie uma ou mais imagens. O GPT Image 2 preserva os detalhes das entradas em alta fidelidade.",
+                help="Envie uma ou mais imagens. O GPT Image 2.5 melhora a preservação de detalhes e a precisão das edições.",
             )
             mascara = st.file_uploader(
                 "Máscara (opcional, PNG com transparência)",
@@ -209,14 +211,21 @@ with aba_playground:
                 st.error(motivo)
 
         qualidade = st.select_slider(
-            "Qualidade", options=["auto", "low", "medium", "high"], value="low"
+            "Qualidade", options=["auto", "low", "medium", "high", "xhigh", "max"], value="low"
         )
+        st.caption("`low` para rascunhos; qualidades superiores podem aumentar tempo e custo.")
+        if tamanho and tamanho != "auto":
+            largura_saida, altura_saida = map(int, tamanho.split("x"))
+            if largura_saida * altura_saida > 2560 * 1440:
+                st.caption("Resoluções acima de 2560 × 1440 são experimentais.")
         formato = st.selectbox("Formato", ["png", "jpeg", "webp"])
         compressao = None
         if formato in {"jpeg", "webp"}:
             compressao = st.slider("Compressão", 0, 100, 85)
             st.caption("JPEG tende a ser mais rápido que PNG.")
-        background = st.selectbox("Fundo", ["auto", "opaque"])
+        fundos = ["auto", "opaque", "transparent"] if formato != "jpeg" else ["auto", "opaque"]
+        background = st.selectbox("Fundo", fundos)
+        st.caption("Para fundo transparente, use PNG ou WebP.")
         moderacao = st.selectbox("Moderação", ["auto", "low"], help="`auto` é o padrão recomendado.")
         quantidade = st.number_input("Quantidade", min_value=1, max_value=4, value=1, step=1)
         parciais_solicitadas = st.select_slider(
@@ -231,12 +240,9 @@ with aba_playground:
             help="Ativa streaming. A API pode retornar menos parciais se a imagem final ficar pronta rapidamente.",
         )
 
-        unitario, total_saida = estimar_custo_saida(tamanho, qualidade, quantidade)
-        if total_saida is not None:
-            st.metric("Estimativa de saída", f"US$ {total_saida:.3f}", f"US$ {unitario:.3f} por imagem")
-            st.caption("Exclui tokens do prompt e, em edições, tokens das imagens de entrada.")
-        else:
-            st.info("A estimativa exata para `auto` ou tamanhos flexíveis está na calculadora oficial.")
+        total_saida = None
+        st.info("O custo será estimado pelos tokens retornados pela API após a geração.")
+        st.markdown(f"[Estimar antes de gerar na calculadora oficial]({CALCULADORA_URL})")
         if parciais_solicitadas:
             custo_parciais_maximo = CUSTO_PARCIAL_USD * parciais_solicitadas * quantidade
             st.caption(
@@ -309,7 +315,7 @@ with aba_playground:
             previa_slot = st.empty()
             try:
                 with st.spinner("A API está renderizando a imagem…", show_time=True):
-                    client = OpenAI(api_key=obter_chave_openai(), timeout=180.0)
+                    client = OpenAI(api_key=obter_chave_openai(), timeout=600.0, max_retries=0)
                     try:
                         if modo == "Editar / usar referências":
                             # A assinatura atual de images.edit ainda não declara
@@ -361,7 +367,11 @@ with aba_playground:
                     finally:
                         client.close()
 
+                if not imagens:
+                    raise RuntimeError("A API encerrou a resposta sem retornar uma imagem final.")
                 st.session_state["imagem_resultados"] = {
+                    "modelo": MODELO,
+                    "modelo_nome": modelo_nome,
                     "imagens": imagens,
                     "parciais": parciais,
                     "formato": formato,
@@ -377,12 +387,22 @@ with aba_playground:
                 st.success(f"Concluído em {time.perf_counter() - inicio:.1f}s.")
             except Exception as exc:
                 st.error("A solicitação não foi concluída.")
+                if "organization must be verified" in str(exc).lower():
+                    st.warning(
+                        "A OpenAI exige a verificação da organização para liberar este modelo. "
+                        "Após verificar, a liberação pode levar até 15 minutos."
+                    )
+                    st.markdown(
+                        "[Verificar organização na OpenAI]"
+                        "(https://platform.openai.com/settings/organization/general)"
+                    )
                 st.code(resumo_erro_api(exc), language="text")
 
     resultado = st.session_state.get("imagem_resultados")
     if resultado:
         st.divider()
         st.subheader("Resultado mais recente")
+        st.caption(f"Modelo usado: {resultado.get('modelo_nome', 'GPT Image 2')}")
         meta_1, meta_2, meta_3, meta_4, meta_5 = st.columns(5)
         meta_1.metric("Imagens", len(resultado["imagens"]))
         meta_2.metric("Prévias recebidas", len(resultado.get("parciais", [])))
@@ -434,7 +454,7 @@ with aba_playground:
                 st.download_button(
                     f"Baixar imagem {indice}",
                     data=imagem["bytes"],
-                    file_name=f"gpt-image-2-{indice}.{extensao}",
+                    file_name=f"{resultado.get('modelo', 'gpt-image-2')}-{indice}.{extensao}",
                     mime=mime,
                     use_container_width=True,
                 )
@@ -443,27 +463,26 @@ with aba_playground:
                     st.write(imagem["revised_prompt"])
 
 with aba_custos:
-    st.subheader("Custos de saída do GPT Image 2")
-    st.caption("Por imagem; tabela oficial para os tamanhos abaixo. A entrada é cobrada à parte.")
-    linhas = []
-    for tamanho, precos in PRECOS_SAIDA.items():
-        linhas.append(
-            {
-                "Tamanho": tamanho,
-                "Low": f"US$ {precos['low']:.3f}",
-                "Medium": f"US$ {precos['medium']:.3f}",
-                "High": f"US$ {precos['high']:.3f}",
-            }
-        )
-    st.table(linhas)
+    st.subheader("Custos do GPT Image 2.5")
+    st.caption("Flare e Sunburst · USD por 1 milhão de tokens · verificado em 08/09/2026.")
+    st.table([
+        {"Tipo": "Texto de entrada", "Preço": f"US$ {PRECO_TEXTO_INPUT_1M:.2f}"},
+        {"Tipo": "Imagem de entrada", "Preço": f"US$ {PRECO_IMAGEM_INPUT_1M:.2f}"},
+        {"Tipo": "Imagem de saída", "Preço": f"US$ {PRECO_IMAGEM_OUTPUT_1M:.2f}"},
+    ])
+    st.caption(
+        "A estimativa usa tarifas de entrada sem desconto de cache. Tarifas iguais por token "
+        "não significam custo igual por imagem: modelo, qualidade e tamanho alteram o consumo. "
+        "Cada prévia parcial acrescenta 100 tokens de saída (US$ 0,003)."
+    )
     st.info(
         "Para rascunhos e iterações, use `low`. `medium` equilibra qualidade e custo; "
-        "`high` é indicado para o arquivo final. Tamanhos quadrados tendem a renderizar mais rápido."
+        "`high`, `xhigh` e `max` oferecem níveis adicionais para o arquivo final."
     )
     st.markdown(
         f"Para resoluções flexíveis, `auto` e custos de imagens de referência, consulte a "
         f"[seção oficial de cálculo de custos]({CALCULADORA_URL}). Em edições, cada imagem de entrada "
-        "é processada em alta fidelidade pelo GPT Image 2, elevando o custo de entrada."
+        "também contribui para o custo de entrada."
     )
 
 with aba_referencias:
@@ -474,14 +493,15 @@ with aba_referencias:
         - **Edição e composição:** uma ou mais imagens de referência com `POST /v1/images/edits`.
         - **Máscara:** delimita a região a editar; deve ser PNG com canal alpha e ter o mesmo tamanho/formato da imagem base.
         - **Saída flexível:** qualidade, resolução, PNG/JPEG/WebP e nível de compressão para JPEG/WebP.
+        - **Novidades 2.5:** Flare e Sunburst, qualidades `xhigh` e `max` e fundo transparente em PNG/WebP.
         - **Segurança:** seleção de moderação `auto` ou `low`, com mensagens de erro e request ID quando disponíveis.
         """
     )
     st.warning(
-        "O GPT Image 2 não aceita fundo transparente. Além disso, prompts complexos podem levar até cerca de dois minutos; "
-        "texto pequeno, posicionamento rigoroso e consistência perfeita entre imagens ainda podem variar."
+        "Sunburst e qualidades superiores podem levar mais tempo para gerar. "
+        "Texto pequeno, posicionamento rigoroso e consistência perfeita entre imagens ainda podem variar."
     )
     st.markdown(
         f"Fontes: [guia de geração de imagens]({DOCS_URL}) e "
-        f"[página do modelo GPT Image 2]({MODELO_URL})."
+        f"[página do modelo {modelo_nome}]({MODELO_URL})."
     )
