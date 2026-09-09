@@ -78,6 +78,26 @@ class ImagePlaygroundTests(unittest.TestCase):
         widget(self.app.selectbox, "Modelo de imagem").select("GPT Image 2.5 Flare").run()
         self.assertEqual(self.app.session_state["imagem_resultados"]["modelo"], "gpt-image-2.5-sunburst")
 
+    def test_legacy_selection_resets_unsupported_options_and_routes_request(self):
+        widget(self.app.selectbox, "Fundo").select("transparent").run()
+        widget(self.app.select_slider, "Qualidade").set_value("max").run()
+        widget(self.app.selectbox, "Modelo de imagem").select("GPT Image 2.0 (anterior)").run()
+        self.assertFalse(self.app.exception)
+        self.assertNotIn("max", widget(self.app.select_slider, "Qualidade").options)
+        self.assertNotIn("xhigh", widget(self.app.select_slider, "Qualidade").options)
+        self.assertNotIn("transparent", widget(self.app.selectbox, "Fundo").options)
+        with patch("openai.OpenAI") as client_class:
+            client_class.return_value.images.generate.return_value = iter([])
+            self.app.text_area[0].set_value("Um círculo azul").run()
+            widget(self.app.button, "Gerar imagem").click().run()
+            params = client_class.return_value.images.generate.call_args.kwargs
+            self.assertEqual(params["model"], "gpt-image-2")
+            self.assertIn(params["quality"], ["auto", "low", "medium", "high"])
+            self.assertIn(params["background"], ["auto", "opaque"])
+        widget(self.app.selectbox, "Modelo de imagem").select("GPT Image 2.5 Flare").run()
+        self.assertIn("max", widget(self.app.select_slider, "Qualidade").options)
+        self.assertIn("transparent", widget(self.app.selectbox, "Fundo").options)
+
     def test_verification_error_and_empty_stream_are_not_success(self):
         with patch("openai.OpenAI") as client_class:
             self.app.text_area[0].set_value("Um círculo azul").run()

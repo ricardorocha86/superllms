@@ -1,4 +1,4 @@
-"""Playground visual para a API Images com GPT Image 2.5."""
+"""Playground visual para a API Images com GPT Image 2 e 2.5."""
 
 import base64
 import time
@@ -10,6 +10,7 @@ from openai import OpenAI
 MODELOS = {
     "GPT Image 2.5 Flare": "gpt-image-2.5-flare",
     "GPT Image 2.5 Sunburst": "gpt-image-2.5-sunburst",
+    "GPT Image 2.0 (anterior)": "gpt-image-2",
 }
 DOCS_URL = "https://developers.openai.com/api/docs/guides/image-generation"
 CALCULADORA_URL = "https://developers.openai.com/api/docs/guides/image-generation#cost-and-latency"
@@ -103,14 +104,16 @@ def resumo_erro_api(exc):
     return " | ".join(partes)
 
 
-st.title("Playground GPT Image 2.5")
+st.title("Playground GPT Image")
 st.caption("Gere, edite e compare imagens usando a API oficial da OpenAI.")
 modelo_nome = st.selectbox("Modelo de imagem", list(MODELOS))
 MODELO = MODELOS[modelo_nome]
+modelo_25 = MODELO.startswith("gpt-image-2.5-")
 MODELO_URL = f"https://developers.openai.com/api/docs/models/{MODELO}"
+st.badge(f"Modelo escolhido: {modelo_nome}", icon=":material/check_circle:")
 st.caption(
     "Flare prioriza velocidade para criar e iterar. Sunburst oferece maior precisão "
-    "para trabalhos detalhados, com geração mais demorada."
+    "para trabalhos detalhados, com geração mais demorada. GPT Image 2.0 mantém a versão anterior disponível."
 )
 
 with st.sidebar:
@@ -180,7 +183,7 @@ with aba_playground:
                 "Imagens de referência",
                 type=["png", "jpg", "jpeg", "webp"],
                 accept_multiple_files=True,
-                help="Envie uma ou mais imagens. O GPT Image 2.5 melhora a preservação de detalhes e a precisão das edições.",
+                help="Envie uma ou mais imagens para editar com o modelo escolhido.",
             )
             mascara = st.file_uploader(
                 "Máscara (opcional, PNG com transparência)",
@@ -210,9 +213,10 @@ with aba_playground:
                 tamanho = None
                 st.error(motivo)
 
-        qualidade = st.select_slider(
-            "Qualidade", options=["auto", "low", "medium", "high", "xhigh", "max"], value="low"
-        )
+        qualidades = ["auto", "low", "medium", "high"]
+        if modelo_25:
+            qualidades += ["xhigh", "max"]
+        qualidade = st.select_slider("Qualidade", options=qualidades, value="low")
         st.caption("`low` para rascunhos; qualidades superiores podem aumentar tempo e custo.")
         if tamanho and tamanho != "auto":
             largura_saida, altura_saida = map(int, tamanho.split("x"))
@@ -223,9 +227,12 @@ with aba_playground:
         if formato in {"jpeg", "webp"}:
             compressao = st.slider("Compressão", 0, 100, 85)
             st.caption("JPEG tende a ser mais rápido que PNG.")
-        fundos = ["auto", "opaque", "transparent"] if formato != "jpeg" else ["auto", "opaque"]
+        fundos = ["auto", "opaque", "transparent"] if modelo_25 and formato != "jpeg" else ["auto", "opaque"]
         background = st.selectbox("Fundo", fundos)
-        st.caption("Para fundo transparente, use PNG ou WebP.")
+        st.caption(
+            "Para fundo transparente, use PNG ou WebP."
+            if modelo_25 else "GPT Image 2.0 aceita fundo automático ou opaco e qualidade até high."
+        )
         moderacao = st.selectbox("Moderação", ["auto", "low"], help="`auto` é o padrão recomendado.")
         quantidade = st.number_input("Quantidade", min_value=1, max_value=4, value=1, step=1)
         parciais_solicitadas = st.select_slider(
@@ -463,8 +470,8 @@ with aba_playground:
                     st.write(imagem["revised_prompt"])
 
 with aba_custos:
-    st.subheader("Custos do GPT Image 2.5")
-    st.caption("Flare e Sunburst · USD por 1 milhão de tokens · verificado em 08/09/2026.")
+    st.subheader(f"Custos — {modelo_nome}")
+    st.caption("USD por 1 milhão de tokens · verificado em 08/09/2026.")
     st.table([
         {"Tipo": "Texto de entrada", "Preço": f"US$ {PRECO_TEXTO_INPUT_1M:.2f}"},
         {"Tipo": "Imagem de entrada", "Preço": f"US$ {PRECO_IMAGEM_INPUT_1M:.2f}"},
@@ -477,7 +484,7 @@ with aba_custos:
     )
     st.info(
         "Para rascunhos e iterações, use `low`. `medium` equilibra qualidade e custo; "
-        "`high`, `xhigh` e `max` oferecem níveis adicionais para o arquivo final."
+        "`high` é indicado para o arquivo final; na linha 2.5, há também `xhigh` e `max`."
     )
     st.markdown(
         f"Para resoluções flexíveis, `auto` e custos de imagens de referência, consulte a "
