@@ -492,7 +492,6 @@ with st.sidebar:
     st.divider()
     st.markdown("### Base de modelos")
     st.caption(f"Atualizada em {DATA_ATUALIZACAO}.")
-    st.caption(resumo_openrouter())
 
     with st.expander("Chaves esperadas"):
         st.code(
