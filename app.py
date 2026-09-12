@@ -19,6 +19,7 @@ pages = {
         st.Page("pages/embedding_lab.py", title="Embedding Lab", icon=":material/hub:"),
         st.Page("pages/token_probabilities.py", title="Probabilidades de Tokens", icon=":material/percent:"),
         st.Page("pages/playground_imagem.py", title="Playground de Imagem", icon=":material/palette:"),
+        st.Page("pages/token_probabilities_v2.py", title="Probabilidades de Tokens", icon=":material/percent:"),
     ],
     "Referência": [
         st.Page("pages/sobre_modelos.py", title="Modelos e Provedores", icon=":material/menu_book:"),
