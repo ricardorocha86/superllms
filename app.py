@@ -17,6 +17,7 @@ pages = {
         st.Page("pages/otimizador_prompt.py", title="Engenharia de Prompt", icon=":material/auto_fix_high:"),
         st.Page("pages/llms.py", title="Laboratório de Modelos", icon=":material/science:"),
         st.Page("pages/embedding_lab.py", title="Embedding Lab", icon=":material/hub:"),
+        st.Page("pages/token_probabilities.py", title="Probabilidades de Tokens", icon=":material/percent:"),
         st.Page("pages/playground_imagem.py", title="Playground de Imagem", icon=":material/palette:"),
     ],
     "Referência": [
