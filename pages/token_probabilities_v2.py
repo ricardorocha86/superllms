@@ -1,43 +1,24 @@
-"""Laboratório didático de logprobs das APIs de texto da OpenAI."""
+"""Visualização token a token usando Chat Completions da OpenAI."""
 
 from __future__ import annotations
 
 import json
 
-import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from openai import OpenAI
 
 from ai_helpers import get_secret
-from token_logprobs import parse_chat_logprobs, parse_response_logprobs
+from token_logprobs import parse_chat_logprobs
 
 
-DOC_CHAT = "https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create"
-DOC_RESPONSES = "https://developers.openai.com/api/reference/resources/responses/methods/create"
-DOC_LOGPROBS = "https://cookbook.openai.com/examples/using_logprobs"
-MODEL_PRESETS = ["gpt-4.1-mini", "gpt-4.1", "gpt-4.1-nano", "gpt-4o-mini", "gpt-4o", "Outro…"]
+MODEL_PRESETS = ["gpt-4.1-mini", "gpt-4.1", "gpt-4.1-nano", "gpt-4o-mini", "gpt-4o"]
 
 
 def request_logprobs(
-    api_key: str, endpoint: str, model: str, prompt: str, top_k: int, max_tokens: int, temperature: float
+    api_key: str, model: str, prompt: str, top_k: int, max_tokens: int, temperature: float
 ):
     with OpenAI(api_key=api_key, timeout=90.0) as client:
-        if endpoint == "Responses API":
-            response = client.responses.create(
-                model=model,
-                instructions="Responda diretamente, em uma única frase curta.",
-                input=prompt,
-                max_output_tokens=max_tokens,
-                top_logprobs=top_k,
-                temperature=temperature,
-                store=False,
-            )
-            details = getattr(response, "incomplete_details", None)
-            return parse_response_logprobs(response), {
-                "finish_reason": getattr(details, "reason", None) or getattr(response, "status", "completed"),
-                "output_text": getattr(response, "output_text", ""),
-            }
         response = client.chat.completions.create(
             model=model,
             messages=[
@@ -53,6 +34,7 @@ def request_logprobs(
         return parse_chat_logprobs(response), {
             "finish_reason": getattr(choice, "finish_reason", None) or "desconhecido",
             "output_text": getattr(choice.message, "content", "") or "",
+            "raw_response": response.model_dump(mode="json"),
         }
 
 
@@ -88,33 +70,11 @@ document.querySelector('#play').onclick=play; document.querySelector('#prev').on
 
 
 st.title("Probabilidades do próximo token")
-st.write("Veja uma geração já concluída ser reproduzida token a token — e o que o modelo poderia ter escolhido em cada passo.")
-
-with st.expander("O que a API oferece hoje?", expanded=True):
-    st.markdown(
-        f"""
-- **Sim, ainda existe — inclusive na API moderna:** a **Responses API** aceita `top_logprobs` e inclui os logprobs nos blocos de texto de saída. A **Chat Completions API** continua oferecendo `logprobs=true` + `top_logprobs`.
-- **Não é uma divisão entre modelo “novo” e “antigo”:** o suporte depende da combinação **modelo + endpoint**. Nem todo modelo implementa todo parâmetro; um erro da API é a verificação definitiva para o modelo escolhido.
-- As duas APIs aceitam até **20 alternativas** por posição, embora possam devolver menos. Este laboratório permite comparar os dois formatos e os normaliza na mesma visualização.
-- Os presets abaixo não se limitam ao GPT-4.1 Mini: também é possível experimentar GPT-4.1, GPT-4.1 Nano, GPT-4o Mini e GPT-4o. A disponibilidade depende da conta.
-- `exp(logprob)` dá a probabilidade do token. As barras abaixo são probabilidades sobre o vocabulário inteiro; as alternativas visíveis podem somar menos de 100%.
-
-Fontes oficiais: [referência de Responses]({DOC_RESPONSES}) · [referência de Chat Completions]({DOC_CHAT}) · [exemplo de logprobs]({DOC_LOGPROBS})
-"""
-    )
 
 api_key = get_secret("OPENAI_API_KEY")
 with st.form("token_form"):
     prompt = st.text_area("Digite uma frase ou pergunta", "Complete de modo criativo: No meio do caminho havia", height=100)
-    col1, col2 = st.columns(2)
-    endpoint = col1.selectbox("API", ["Chat Completions", "Responses API"])
-    model_preset = col2.selectbox("Modelo", MODEL_PRESETS)
-    custom_model = (
-        st.text_input("Identificador personalizado", placeholder="Ex.: um modelo disponível na sua conta")
-        if model_preset == "Outro…"
-        else ""
-    )
-    model = custom_model.strip() if model_preset == "Outro…" else model_preset
+    model = st.selectbox("Modelo", MODEL_PRESETS)
     col3, col4, col5 = st.columns(3)
     top_k = col3.slider("Alternativas por token", 1, 20, 5)
     max_tokens = col4.slider("Máximo de tokens", 4, 40, 20)
@@ -134,23 +94,22 @@ if not api_key:
 if submitted:
     if not api_key:
         st.error("A chave `OPENAI_API_KEY` não está configurada.")
-    elif not prompt.strip() or not model.strip():
-        st.warning("Preencha o texto e o identificador do modelo.")
+    elif not prompt.strip():
+        st.warning("Preencha o texto.")
     else:
         try:
             with st.spinner("Gerando e coletando logprobs..."):
                 steps, metadata = request_logprobs(
-                    api_key, endpoint, model.strip(), prompt.strip(), top_k, max_tokens, temperature
+                    api_key, model, prompt.strip(), top_k, max_tokens, temperature
                 )
                 st.session_state["token_probability_run"] = {
                     "steps": steps,
-                    "model": model.strip(),
-                    "endpoint": endpoint,
+                    "model": model,
                     "temperature": temperature,
                     **metadata,
                 }
         except Exception as exc:
-            st.error("Não foi possível obter logprobs. Confirme se o modelo selecionado aceita esse recurso na API escolhida.")
+            st.error("Não foi possível obter logprobs com o modelo selecionado.")
             st.code(str(exc))
 
 run = st.session_state.get("token_probability_run")
@@ -159,7 +118,7 @@ if run:
     speed = st.slider("Intervalo da animação (ms)", 250, 2000, 800, 50)
     components.html(replay_html(run["steps"], speed), height=490, scrolling=True)
     st.caption(
-        f"Modelo: `{run['model']}` · API: {run['endpoint']} · temperatura: {run.get('temperature', 1.0):.1f} · "
+        f"Modelo: `{run['model']}` · API: Chat Completions · temperatura: {run.get('temperature', 1.0):.1f} · "
         f"término: `{run.get('finish_reason', 'não registrado')}`. O verde marca o token efetivamente escolhido."
     )
     if run.get("finish_reason") in {"length", "max_output_tokens"}:
@@ -167,19 +126,11 @@ if run:
     else:
         st.success(f"Todos os {len(run['steps'])} tokens textuais retornados pela API aparecem no replay.")
 
-    with st.expander("Inspecionar os dados recebidos"):
-        rows = [
-            {"posição": s["index"] + 1, "token": s["label"], "probabilidade": s["probability"], "logprob": s["logprob"]}
-            for s in run["steps"]
-        ]
-        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True, column_config={"probabilidade": st.column_config.ProgressColumn(format="percent", min_value=0, max_value=1)})
-        st.download_button("Baixar JSON", json.dumps(run, ensure_ascii=False, indent=2), "token-logprobs.json", "application/json")
-
-st.divider()
-st.markdown("### Como a animação funciona")
-st.write("A chamada não precisa ser transmitida ao navegador. O app recebe uma única resposta com o texto, o token escolhido, seu `logprob` e as melhores alternativas de cada posição; depois o JavaScript apenas reproduz esses dados no tempo. Isso torna a aula repetível, permite pausar e não faz novas chamadas durante o replay.")
-st.info(
-    "**Sobre o último token:** o parser não remove o último item: ele mostra todos os tokens textuais presentes em `logprobs`. "
-    "O token interno de fim de sequência (EOS) não é exposto como conteúdo pela API, por isso não aparece como uma palavra extra. "
-    "O campo de término acima distingue uma conclusão normal de um corte pelo limite configurado."
-)
+    with st.expander("JSON completo da resposta"):
+        st.json(run["raw_response"], expanded=False)
+        st.download_button(
+            "Baixar JSON",
+            json.dumps(run["raw_response"], ensure_ascii=False, indent=2),
+            "chat-completion-logprobs.json",
+            "application/json",
+        )
