@@ -36,10 +36,7 @@ TAMANHOS_POPULARES = {
 
 
 def obter_chave_openai():
-    """Prefere a chave temporária da sessão e depois o secrets.toml."""
-    chave_temporaria = st.session_state.get("imagem_openai_api_key", "").strip()
-    if chave_temporaria:
-        return chave_temporaria
+    """Usa a chave configurada nos secrets do aplicativo."""
     try:
         return str(st.secrets["OPENAI_API_KEY"])
     except (KeyError, FileNotFoundError):
@@ -116,49 +113,12 @@ st.caption(
     "para trabalhos detalhados, com geração mais demorada. GPT Image 2.0 mantém a versão anterior disponível."
 )
 
-with st.sidebar:
-    st.header("Conexão")
-    st.text_input(
-        "Chave temporária da OpenAI (opcional)",
-        type="password",
-        key="imagem_openai_api_key",
-        help="Se preenchida, tem prioridade sobre OPENAI_API_KEY em st.secrets e vale apenas nesta sessão.",
-    )
-    if obter_chave_openai():
-        st.success("Chave da API disponível")
-    else:
-        st.warning("Configure OPENAI_API_KEY em .streamlit/secrets.toml ou informe uma chave temporária.")
-
-    if st.button("Testar conexão com a OpenAI", use_container_width=True):
-        if not obter_chave_openai():
-            st.error("Não há uma chave configurada para testar.")
-        else:
-            try:
-                client = OpenAI(api_key=obter_chave_openai(), timeout=20.0)
-                try:
-                    modelos = client.models.list()
-                finally:
-                    client.close()
-                st.success(f"Conexão e autenticação OK ({len(modelos.data)} modelos recebidos).")
-                if MODELO not in {item.id for item in modelos.data}:
-                    st.warning(
-                        f"{modelo_nome} não apareceu entre os modelos disponíveis para esta chave. "
-                        "Confira a verificação da organização e as permissões do projeto na OpenAI."
-                    )
-            except Exception as exc:
-                st.error("Não foi possível conectar à API.")
-                st.code(resumo_erro_api(exc), language="text")
-
-    st.divider()
-    st.caption(f"Modelo: `{MODELO}`")
-    st.caption("A API pode exigir verificação da organização antes do primeiro uso.")
-
 aba_playground, aba_custos, aba_referencias = st.tabs(
     ["Playground", "Custos", "Guia rápido"]
 )
 
 with aba_playground:
-    esquerda, direita = st.columns([1.1, 0.9], gap="large")
+    esquerda, direita = st.columns([1, 2], gap="large")
 
     with esquerda:
         modo = st.radio(
@@ -197,65 +157,49 @@ with aba_playground:
 
     with direita:
         st.subheader("Configurações de saída")
-        tamanho_rotulo = st.selectbox("Tamanho", list(TAMANHOS_POPULARES))
-        tamanho = TAMANHOS_POPULARES[tamanho_rotulo]
-        if tamanho == "customizado":
-            col_largura, col_altura = st.columns(2)
-            with col_largura:
-                largura = st.number_input("Largura", min_value=16, max_value=3840, value=1024, step=16)
-            with col_altura:
-                altura = st.number_input("Altura", min_value=16, max_value=3840, value=1024, step=16)
-            valido, motivo = tamanho_valido(largura, altura)
-            if valido:
-                tamanho = f"{largura}x{altura}"
-                st.success(f"Tamanho válido: {tamanho}")
-            else:
-                tamanho = None
-                st.error(motivo)
+        dimensoes, aparencia, geracao = st.columns(3, gap="medium")
+        with dimensoes:
+            tamanho_rotulo = st.selectbox("Tamanho", list(TAMANHOS_POPULARES))
+            tamanho = TAMANHOS_POPULARES[tamanho_rotulo]
+            if tamanho == "customizado":
+                col_largura, col_altura = st.columns(2)
+                with col_largura:
+                    largura = st.number_input("Largura", min_value=16, max_value=3840, value=1024, step=16)
+                with col_altura:
+                    altura = st.number_input("Altura", min_value=16, max_value=3840, value=1024, step=16)
+                valido, motivo = tamanho_valido(largura, altura)
+                if valido:
+                    tamanho = f"{largura}x{altura}"
+                    st.success(f"Tamanho válido: {tamanho}")
+                else:
+                    tamanho = None
+                    st.error(motivo)
 
-        qualidades = ["auto", "low", "medium", "high"]
-        if modelo_25:
-            qualidades += ["xhigh", "max"]
-        qualidade = st.select_slider("Qualidade", options=qualidades, value="low")
-        st.caption("`low` para rascunhos; qualidades superiores podem aumentar tempo e custo.")
-        if tamanho and tamanho != "auto":
-            largura_saida, altura_saida = map(int, tamanho.split("x"))
-            if largura_saida * altura_saida > 2560 * 1440:
-                st.caption("Resoluções acima de 2560 × 1440 são experimentais.")
-        formato = st.selectbox("Formato", ["png", "jpeg", "webp"])
-        compressao = None
-        if formato in {"jpeg", "webp"}:
-            compressao = st.slider("Compressão", 0, 100, 85)
-            st.caption("JPEG tende a ser mais rápido que PNG.")
-        fundos = ["auto", "opaque", "transparent"] if modelo_25 and formato != "jpeg" else ["auto", "opaque"]
-        background = st.selectbox("Fundo", fundos)
-        st.caption(
-            "Para fundo transparente, use PNG ou WebP."
-            if modelo_25 else "GPT Image 2.0 aceita fundo automático ou opaco e qualidade até high."
-        )
-        moderacao = st.selectbox("Moderação", ["auto", "low"], help="`auto` é o padrão recomendado.")
-        quantidade = st.number_input("Quantidade", min_value=1, max_value=4, value=1, step=1)
-        parciais_solicitadas = st.select_slider(
-            "Pré-visualizações parciais",
-            options=[0, 1, 2, 3],
-            value=0,
-            format_func=lambda valor: (
-                "Desligadas (sem custo adicional)"
-                if valor == 0
-                else f"{valor} prévia(s)"
-            ),
-            help="Ativa streaming. A API pode retornar menos parciais se a imagem final ficar pronta rapidamente.",
-        )
-
-        total_saida = None
-        st.info("O custo será estimado pelos tokens retornados pela API após a geração.")
-        st.markdown(f"[Estimar antes de gerar na calculadora oficial]({CALCULADORA_URL})")
-        if parciais_solicitadas:
-            custo_parciais_maximo = CUSTO_PARCIAL_USD * parciais_solicitadas * quantidade
+            qualidades = ["auto", "low", "medium", "high"]
+            if modelo_25:
+                qualidades += ["xhigh", "max"]
+            qualidade = st.select_slider("Qualidade", options=qualidades, value="low")
+            st.caption("`low` para rascunhos; qualidades superiores podem aumentar tempo e custo.")
+            if tamanho and tamanho != "auto":
+                largura_saida, altura_saida = map(int, tamanho.split("x"))
+                if largura_saida * altura_saida > 2560 * 1440:
+                    st.caption("Resoluções acima de 2560 × 1440 são experimentais.")
+        with aparencia:
+            formato = st.selectbox("Formato", ["png", "jpeg", "webp"])
+            compressao = None
+            if formato in {"jpeg", "webp"}:
+                compressao = st.slider("Compressão", 0, 100, 85)
+                st.caption("JPEG tende a ser mais rápido que PNG.")
+            fundos = ["auto", "opaque", "transparent"] if modelo_25 and formato != "jpeg" else ["auto", "opaque"]
+            background = st.selectbox("Fundo", fundos)
             st.caption(
-                f"Pré-visualizações: até US$ {custo_parciais_maximo:.3f} adicionais "
-                f"({parciais_solicitadas} × US$ {CUSTO_PARCIAL_USD:.3f} por imagem)."
+                "Para fundo transparente, use PNG ou WebP."
+                if modelo_25 else "GPT Image 2.0 aceita fundo automático ou opaco e qualidade até high."
             )
+        with geracao:
+            moderacao = st.selectbox("Moderação", ["auto", "low"], help="`auto` é o padrão recomendado.")
+            quantidade = st.number_input("Quantidade", min_value=1, max_value=4, value=1, step=1)
+        total_saida = None
 
     if modo == "Editar / usar referências" and imagens_referencia:
         with st.expander("Prévia das referências", expanded=False):
@@ -277,8 +221,7 @@ with aba_playground:
             "moderation": moderacao,
             "n": int(quantidade),
         }
-        args["stream"] = True
-        args["partial_images"] = parciais_solicitadas
+        args["stream"] = False
         if compressao is not None:
             args["output_compression"] = compressao
         if modo == "Editar / usar referências":
@@ -310,8 +253,7 @@ with aba_playground:
                 "moderation": moderacao,
                 "n": int(quantidade),
             }
-            parametros["stream"] = True
-            parametros["partial_images"] = parciais_solicitadas
+            parametros["stream"] = False
             if compressao is not None:
                 parametros["output_compression"] = compressao
 
@@ -319,7 +261,6 @@ with aba_playground:
             parciais = []
             imagens = []
             uso_tokens = {"texto_input": 0, "imagem_input": 0, "imagem_output": 0}
-            previa_slot = st.empty()
             try:
                 with st.spinner("A API está renderizando a imagem…", show_time=True):
                     client = OpenAI(api_key=obter_chave_openai(), timeout=600.0, max_retries=0)
@@ -340,37 +281,16 @@ with aba_playground:
                         else:
                             resposta = client.images.generate(**parametros)
 
-                        for evento in resposta:
-                            tipo_evento = getattr(evento, "type", "")
-                            if tipo_evento.endswith(".partial_image"):
-                                parcial = {
-                                    "bytes": base64.b64decode(evento.b64_json),
-                                    "indice": getattr(evento, "partial_image_index", len(parciais)),
-                                }
-                                parciais.append(parcial)
-                                previa_slot.image(
-                                    parcial["bytes"],
-                                    caption=f"Prévia parcial {parcial['indice'] + 1}",
-                                    width=260,
-                                )
-                            elif tipo_evento.endswith(".completed"):
-                                imagens.append(
-                                    {
-                                        "bytes": base64.b64decode(evento.b64_json),
-                                        "revised_prompt": None,
-                                    }
-                                )
-                                usage = getattr(evento, "usage", None)
-                                detalhes_input = getattr(usage, "input_tokens_details", None)
-                                uso_tokens["texto_input"] += int(
-                                    getattr(detalhes_input, "text_tokens", 0) or 0
-                                )
-                                uso_tokens["imagem_input"] += int(
-                                    getattr(detalhes_input, "image_tokens", 0) or 0
-                                )
-                                uso_tokens["imagem_output"] += int(
-                                    getattr(usage, "output_tokens", 0) or 0
-                                )
+                        for item in resposta.data:
+                            imagens.append({
+                                "bytes": base64.b64decode(item.b64_json),
+                                "revised_prompt": getattr(item, "revised_prompt", None),
+                            })
+                        usage = getattr(resposta, "usage", None)
+                        detalhes_input = getattr(usage, "input_tokens_details", None)
+                        uso_tokens["texto_input"] = int(getattr(detalhes_input, "text_tokens", 0) or 0)
+                        uso_tokens["imagem_input"] = int(getattr(detalhes_input, "image_tokens", 0) or 0)
+                        uso_tokens["imagem_output"] = int(getattr(usage, "output_tokens", 0) or 0)
                     finally:
                         client.close()
 
@@ -453,11 +373,10 @@ with aba_playground:
                     )
 
         extensao, mime = extensao_e_mime(resultado["formato"])
-        for indice, imagem in enumerate(resultado["imagens"], start=1):
-            col_imagem, col_info = st.columns([2, 1])
-            with col_imagem:
+        colunas_imagens = st.columns(len(resultado["imagens"]), gap="large")
+        for indice, (coluna, imagem) in enumerate(zip(colunas_imagens, resultado["imagens"]), start=1):
+            with coluna:
                 st.image(imagem["bytes"], caption=f"Imagem {indice}", use_container_width=True)
-            with col_info:
                 st.download_button(
                     f"Baixar imagem {indice}",
                     data=imagem["bytes"],

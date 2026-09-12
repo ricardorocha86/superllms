@@ -71,6 +71,38 @@ document.querySelector('#play').onclick=play; document.querySelector('#prev').on
 
 st.title("Probabilidades do próximo token")
 
+st.markdown(
+    "**Tokens e geração.** Tokens são unidades de texto: podem representar uma palavra, "
+    "parte dela, pontuação ou espaços. Os tokens produzidos na resposta são chamados de "
+    "*completion tokens*. A cada passo, o modelo atribui pontuações (*logits*) aos possíveis "
+    "próximos tokens, considerando o prompt e tudo o que já gerou. Essas pontuações são "
+    "convertidas em probabilidades; na amostragem, um token é sorteado segundo essa distribuição "
+    "e incorporado ao contexto para calcular o próximo passo. Assim, um token com 60% de "
+    "probabilidade tem mais chance de sair, mas não é uma escolha obrigatória. "
+    "[Sobre tokens](https://help.openai.com/en/articles/4936856)."
+)
+st.markdown(
+    "**Temperatura.** Para uma temperatura $T>0$, dividimos cada logit $z_i$ por $T$ "
+    "antes de aplicar a função softmax, conforme a equação abaixo, em que $V$ é o "
+    "vocabulário e $p_i(T)$ é a probabilidade do token $i$. Com $T=1$, temos a distribuição "
+    "original; com $0<T<1$, ela fica mais concentrada nos tokens mais prováveis; com $T>1$, "
+    "fica mais uniforme, dando mais chance às alternativas menos prováveis. A temperatura "
+    "preserva a ordem dos logits, mas altera as chances relativas dos tokens. "
+    "[Referência sobre temperatura](https://huggingface.co/docs/transformers/v4.40.2/en/internal/generation_utils#transformers.TemperatureLogitsWarper)."
+)
+st.latex(r"p_i(T)=\frac{\exp(z_i/T)}{\sum_{j\in V}\exp(z_j/T)},\qquad T>0")
+st.markdown(
+    "**Da distribuição à escolha.** Pense em uma roleta com uma faixa para cada token, "
+    "proporcional à sua probabilidade: a temperatura muda o tamanho dessas faixas antes "
+    "do sorteio. No limite $T\\to0^+$, a distribuição se concentra nos maiores logits; "
+    "o ajuste $T=0$ é tratado separadamente para favorecer a escolha do token mais provável, "
+    "sem dividir por zero. Temperaturas maiores podem trazer mais variedade, mas não "
+    "garantem qualidade ou correção. No replay, o verde indica o token escolhido e as "
+    "porcentagens são calculadas por $p=\\exp(\\mathrm{logprob})$ a partir dos valores "
+    "retornados pela API. “Alternativas por token” controla quantas alternativas são "
+    "exibidas, não restringe o sorteio a elas; por isso, as barras podem somar menos de 100%."
+)
+
 api_key = get_secret("OPENAI_API_KEY")
 with st.form("token_form"):
     prompt = st.text_area("Digite uma frase ou pergunta", "Complete de modo criativo: No meio do caminho havia", height=100)

@@ -64,8 +64,8 @@ st.divider()
 
 if not eventos:
     st.info(
-        "Nenhuma chamada registrada nesta sessão. Use o Chatbot ou a Engenharia de "
-        "Prompt e volte aqui — cada resposta registra tokens e custo automaticamente.",
+        "Nenhuma chamada registrada nesta sessão. Os laboratórios atuais ainda não "
+        "enviam seus consumos para este histórico.",
         icon=":material/history:",
     )
     st.stop()

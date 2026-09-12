@@ -2,72 +2,22 @@ import streamlit as st
 
 
 st.title("SuperLLMs")
-st.subheader("Um espaço para aprender, testar e construir com modelos de IA")
 st.write(
-    "Escolha um caminho abaixo para começar. A plataforma reúne laboratório de modelos, "
-    "chat, engenharia de prompt, embeddings e geração de imagens em um só lugar."
+    "Um espaço para aprender e experimentar com inteligência artificial. "
+    "Compare modelos de linguagem, explore embeddings, crie imagens e entenda "
+    "como os modelos escolhem os próximos tokens de uma resposta."
 )
 
-st.markdown("## Comece por aqui")
-cards = [
-    (":material/chat:", "Chatbot", "Converse com uma persona usando qualquer modelo configurado na base.", "pages/chatbot.py"),
-    (":material/auto_fix_high:", "Engenharia de Prompt", "Aprenda a escrever instruções melhores e use o otimizador de prompt com IA.", "pages/otimizador_prompt.py"),
-    (":material/science:", "Laboratório de Modelos", "Compare provedores, modelos, estilos de resposta e custos.", "pages/llms.py"),
-    (":material/hub:", "Embedding Lab", "Aprenda embeddings, similaridade, busca semântica, classificação e multimodalidade.", "pages/embedding_lab.py"),
-    (":material/percent:", "Probabilidades de Tokens", "Reproduza uma geração passo a passo e compare as alternativas consideradas pelo modelo.", "pages/token_probabilities.py"),
+pages = [
+    (":material/science:", "Laboratório de Modelos", "Compare respostas de diferentes modelos de IA.", "pages/llms.py"),
+    (":material/hub:", "Embedding Lab", "Explore similaridade e busca semântica.", "pages/embedding_lab.py"),
+    (":material/palette:", "Playground de Imagem", "Crie e edite imagens com IA.", "pages/playground_imagem.py"),
+    (":material/percent:", "Probabilidades de Tokens", "Entenda a geração de texto e o efeito da temperatura.", "pages/token_probabilities_v2.py"),
 ]
-CARD_IMAGES = {
-    "Chatbot": "assets/home/chatbot.png",
-    "Engenharia de Prompt": "assets/home/prompt-engineering.png",
-    "Laboratório de Modelos": "assets/home/models-lab.png",
-    "Embedding Lab": "assets/home/embedding-lab.png",
-}
 
-for start in range(0, len(cards), 2):
-    columns = st.columns(2, gap="large")
-    for column, (icon, title, description, target) in zip(columns, cards[start : start + 2]):
+for start in range(0, len(pages), 2):
+    for column, (icon, title, description, target) in zip(st.columns(2, gap="large"), pages[start:start + 2]):
         with column:
             with st.container(border=True):
-                if title in CARD_IMAGES:
-                    st.image(CARD_IMAGES[title], use_container_width=True)
-                st.markdown(f"### {title}")
-                st.write(description)
-                st.page_link(target, label=f"Abrir {title}", icon=icon, use_container_width=True)
-
-st.markdown("## O que você pode fazer")
-use_cases = [
-    ("Aprender", "Leia as aulas de engenharia de prompt e embedding, com exemplos executáveis e explicações curtas."),
-    ("Experimentar", "Rode o mesmo pedido em modelos diferentes e observe qualidade, latência e custo."),
-    ("Construir", "Transforme um pedido informal em um prompt com contexto, critérios de sucesso e formato de saída."),
-    ("Criar", "Gere imagens com referências ou use o chatbot para explorar ideias antes de implementá-las."),
-]
-columns = st.columns(4)
-for column, (title, description) in zip(columns, use_cases):
-    with column:
-        st.markdown(f"### {title}")
-        st.caption(description)
-
-st.markdown("## Exemplos rápidos")
-with st.expander("Organizar uma reunião"):
-    st.code(
-        "Você é um secretário executivo. A partir das notas abaixo, produza: "
-        "(1) decisões, (2) responsáveis, (3) prazos e (4) perguntas em aberto. "
-        "Não invente informações; marque lacunas como 'não informado'.\n\n[notas]",
-        language="text",
-    )
-with st.expander("Explorar uma base textual"):
-    st.code(
-        "Use o Laboratório de Modelos para comparar respostas, provedores, "
-        "personas, tempo de geração e custo estimado.",
-        language="text",
-    )
-with st.expander("Melhorar um pedido vago"):
-    st.code(
-        "Pedido vago: 'faça um post sobre meu produto'\n\n"
-        "No Otimizador, informe público, objetivo, contexto, restrições e formato "
-        "para receber uma versão testável e reutilizável.",
-        language="text",
-    )
-
-st.divider()
-st.caption("Dica: comece pelo Chatbot para testar uma ideia e depois leve o pedido ao Otimizador de Prompt.")
+                st.page_link(target, label=title, icon=icon, use_container_width=True)
+                st.caption(description)

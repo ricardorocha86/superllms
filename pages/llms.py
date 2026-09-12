@@ -252,6 +252,8 @@ async def testar_modelo(prompt, api_key, modelo_info):
             "tokens_input": None,
             "tokens_output": None,
             "erro": formatar_erro_api(exc),
+            "codigo_erro": getattr(exc, "status_code", None) or getattr(exc, "code", None) or type(exc).__name__,
+            "mensagem_erro": getattr(exc, "message", None) or str(exc),
         }
 
 
@@ -317,13 +319,34 @@ async def executar_modelos_progressivo(
     resultados = [None] * total
     erros_resumidos = []
     tarefas = []
+    em_andamento = {}
+    with resultados_container:
+        colunas = st.columns(3, gap="medium")
+    alturas_estimadas = [0, 0, 0]
+
+    def publicar_resultado(resultado, info):
+        # Aproxima a altura por linhas e quebra de texto; não reserva espaços.
+        coluna = min(range(3), key=lambda indice: alturas_estimadas[indice])
+        with colunas[coluna]:
+            exibir_resultado(resultado, info)
+        texto = str(resultado.get("texto") or resultado.get("erro") or "")
+        if not resultado["ok"]:
+            texto = resumir_erro_api(texto)[:150]
+        linhas = sum(max(1, (len(linha) + 44) // 45) for linha in texto.splitlines())
+        alturas_estimadas[coluna] += 6 + linhas
 
     def atualizar_progresso():
         progresso_barra.progress(concluidos / total if total else 0)
-        status_slot.info(
-            f"{concluidos}/{total} finalizados | {sucessos} sucesso(s) | "
+        resumo = (
+            f"{concluidos}/{total} finalizados · {sucessos} sucesso(s) · "
             f"{len(erros_resumidos)} erro(s)"
         )
+        agora = time.perf_counter()
+        pendentes = [
+            f"⏳ Gerando **{nome}** · {int(agora - inicio)}s"
+            for nome, inicio in em_andamento.values()
+        ]
+        status_slot.info(resumo + ("\n\n" + "  \n".join(pendentes) if pendentes else ""))
 
     atualizar_progresso()
 
@@ -338,35 +361,43 @@ async def executar_modelos_progressivo(
                 "tokens_input": None,
                 "tokens_output": None,
                 "erro": f"Chave {secret_name} não encontrada em st.secrets.",
+                "codigo_erro": "CHAVE_AUSENTE",
             }
             info = modelo_info.to_dict()
             resultados[pos] = resultado
+            publicar_resultado(resultado, info)
             erros_resumidos.append(linha_erro_resumida(resultado, info))
             concluidos += 1
             atualizar_progresso()
             continue
 
+        em_andamento[pos] = (modelo_info["modelo_nome"], time.perf_counter())
         tarefas.append(
             asyncio.create_task(
                 testar_modelo_com_posicao(pos, prompt_final, api_key, modelo_info)
             )
         )
 
+    atualizar_progresso()
     for tarefa in asyncio.as_completed(tarefas):
-        pos, modelo_info, resultado = await tarefa
+        proxima_resposta = asyncio.ensure_future(tarefa)
+        while not proxima_resposta.done():
+            await asyncio.wait({proxima_resposta}, timeout=1.0)
+            atualizar_progresso()
+        pos, modelo_info, resultado = await proxima_resposta
+        em_andamento.pop(pos, None)
         resultados[pos] = resultado
         concluidos += 1
 
         if resultado["ok"]:
             sucessos += 1
-            with resultados_container:
-                exibir_resultado(resultado, modelo_info)
         else:
             erros_resumidos.append(linha_erro_resumida(resultado, modelo_info))
 
+        publicar_resultado(resultado, modelo_info)
         atualizar_progresso()
 
-    status_slot.success(
+    status_slot.caption(
         f"Finalizado: {sucessos}/{total} modelo(s) com sucesso, "
         f"{len(erros_resumidos)} erro(s)."
     )
@@ -376,13 +407,28 @@ async def executar_modelos_progressivo(
 def exibir_resultado(resultado, modelo_info):
     empresa = modelo_info["empresa"]
     modelo_nome = modelo_info["modelo_nome"]
-    provedor = modelo_info["provedor"]
-    if not resultado["ok"]:
-        return
-
-    tokens_output = resultado["tokens_output"] or contar_tokens(resultado["texto"])
-    st.caption(f"{provedor} | {empresa} — {modelo_nome} · {resultado['tempo']:.2f}s · {tokens_output} tokens")
-    st.markdown(resultado["texto"] or "_Resposta vazia._")
+    with st.container(border=True, key=f"resposta_modelo_{modelo_info['uid']}"):
+        st.markdown(f"**{empresa} · {modelo_nome}**")
+        if not resultado["ok"]:
+            codigo = resultado.get("codigo_erro") or "ERRO"
+            mensagem = " ".join(str(resultado.get("mensagem_erro") or resultado["erro"]).split())
+            mensagem_pt = resumir_erro_api(mensagem)
+            if mensagem_pt == mensagem[:220] + ("..." if len(mensagem) > 220 else ""):
+                texto_erro = mensagem.lower()
+                if "402" in str(codigo) or "credit" in texto_erro or "balance" in texto_erro:
+                    mensagem_pt = "Saldo ou créditos insuficientes para executar este modelo."
+                elif "400" in str(codigo) or "unsupported" in texto_erro or "invalid" in texto_erro:
+                    mensagem_pt = "O provedor não aceitou um dos parâmetros enviados para este modelo."
+                elif str(codigo).startswith("5"):
+                    mensagem_pt = "O provedor apresentou uma falha interna. Tente novamente em instantes."
+                else:
+                    mensagem_pt = "Não foi possível concluir a solicitação ao provedor."
+            st.error(f"Deu erro. Código: {codigo}. Mensagem: {mensagem_pt}")
+            return
+        texto_resposta = resultado["texto"] or "_Resposta vazia._"
+        st.markdown("\n".join(f"> {linha}" for linha in texto_resposta.splitlines()))
+        tokens_output = resultado["tokens_output"] or contar_tokens(resultado["texto"])
+        st.caption(f"{resultado['tempo']:.2f}s · {tokens_output} tokens de saída")
 
 
 def calcular_relatorio_custos(resultados, modelos_selecionados, prompt_final):
@@ -432,16 +478,16 @@ def calcular_relatorio_custos(resultados, modelos_selecionados, prompt_final):
 with st.sidebar:
     st.markdown("### Configurações de personalidade")
     selecoes_personalidade = {}
-    for chave, dados in PERSONALIDADES.items():
-        selecoes_personalidade[chave] = st.checkbox(
+    colunas_personalidade = st.columns(2)
+    for indice, (chave, dados) in enumerate(PERSONALIDADES.items()):
+        selecoes_personalidade[chave] = colunas_personalidade[indice % 2].checkbox(
             dados["label"],
             value=dados.get("default", False),
             key=f"personalidade_{chave}",
             disabled=dados.get("disabled", False),
-            help=dados["instrucao"],
         )
 
-    tamanho_resposta = st.slider("Tamanho da resposta (palavras)", 10, 200, 80, 10)
+    tamanho_resposta = st.slider("Tamanho da resposta (palavras)", 10, 100, 80, 10)
 
     st.divider()
     st.markdown("### Base de modelos")
@@ -461,6 +507,26 @@ with st.sidebar:
         )
 
 
+st.html("""<style>
+[class*="st-key-resposta_modelo_"] {
+    background-color: color-mix(in srgb, var(--text-color, #31333f) 4%, var(--background-color, #fff));
+    border-radius: 10px;
+}
+[class*="st-key-resposta_modelo_"] blockquote {
+    color: inherit !important;
+    opacity: 1;
+    font-style: normal;
+    border-left: 3px solid #0068c9;
+    padding: 0 0 0 0.75rem;
+    margin: 0.5rem 0;
+    background: transparent;
+}
+[class*="st-key-resposta_modelo_"] blockquote p {
+    color: inherit !important;
+    opacity: 1;
+}
+</style>""")
+
 st.title("Laboratório de Modelos")
 st.caption(
     f"Compare {len(df_modelos)} modelos atuais em "
@@ -469,139 +535,66 @@ st.caption(
 
 col_prompt, col_configuracoes = st.columns(2, gap="large")
 with col_prompt:
-    prompt = st.text_area("Digite seu prompt:", height=320)
+    prompt = st.text_area("Digite seu prompt:", height=140)
+    prompt_preview = construir_prompt_final(prompt, tamanho_resposta, selecoes_personalidade)
+    st.markdown("**Prompt enviado**")
+    st.code(prompt_preview, language="text", wrap_lines=True)
+    st.caption(f"{contar_tokens(prompt_preview)} tokens estimados")
 
-
-with col_configuracoes, st.expander("Seleção de modelos", expanded=False):
+with col_configuracoes:
+    st.subheader("Seleção de modelos")
     df_base = df_modelos.sort_values(
-        ["provedor", "status", "empresa", "modelo_nome"], kind="stable"
-    ).copy()
-    df_base["faixa_preco"] = df_base.apply(classificar_faixa_de_preco, axis=1)
-    uids_padrao = df_base.loc[
-        df_base["selecionar_padrao"].fillna(False).astype(bool), "uid"
-    ].tolist()
+        ["empresa", "modelo_nome", "provedor"], kind="stable"
+    ).drop_duplicates("uid").copy()
+    opcoes = df_base["uid"].tolist()
+    # Um representante por fabricante, priorizando a categoria do catálogo.
+    ranking = df_base.assign(
+        prioridade=df_base["tier"].map({"Elite": 5, "Pro": 4, "Preview": 3, "Básico": 2, "Free": 1}).fillna(0),
+        direto=~df_base["provedor"].str.contains("OpenRouter", case=False),
+    ).sort_values(["prioridade", "direto"], ascending=[False, False], kind="stable")
+    uids_padrao = ranking.drop_duplicates("empresa")["uid"].tolist()
+    rotulos = {
+        row["uid"]: f"{row['modelo_nome']} · {row['provedor']} · {row['modelo_id']}"
+        for _, row in df_base.iterrows()
+    }
+    chave_seletor = "seletor_modelos_fabricantes"
+    if chave_seletor not in st.session_state:
+        st.session_state[chave_seletor] = [
+            uid for uid in uids_padrao
+            if uid in rotulos
+        ]
+    else:
+        st.session_state[chave_seletor] = [
+            uid for uid in st.session_state[chave_seletor] if uid in rotulos
+        ]
 
-    if "uids_modelos_selecionados" not in st.session_state:
-        st.session_state["uids_modelos_selecionados"] = uids_padrao
-    if "versao_seletor_modelos" not in st.session_state:
-        st.session_state["versao_seletor_modelos"] = 0
+    def restaurar_selecao(uids):
+        st.session_state[chave_seletor] = uids
+        st.session_state["uids_modelos_selecionados"] = uids.copy()
 
-    col_filtro_empresa, col_filtro_preco = st.columns(2)
-    with col_filtro_empresa:
-        empresa_escolhida = st.selectbox(
-            "Empresa",
-            ["Todas as empresas", *sorted(df_base["empresa"].unique())],
-            help="Exiba modelos de uma única empresa.",
-        )
-    with col_filtro_preco:
-        preco_escolhido = st.selectbox(
-            "Faixa de preço predefinida",
-            list(FAIXAS_DE_PRECO),
-            help="Considera 1M de tokens de entrada + 1M de saída.",
-        )
-
-    df_filtrado = df_base
-    if empresa_escolhida != "Todas as empresas":
-        df_filtrado = df_filtrado[df_filtrado["empresa"] == empresa_escolhida]
-    faixa_escolhida = FAIXAS_DE_PRECO[preco_escolhido]
-    if faixa_escolhida:
-        df_filtrado = df_filtrado[df_filtrado["faixa_preco"] == faixa_escolhida]
-
-    col_sel_1, col_sel_2, col_sel_3, col_sel_4 = st.columns([1.6, 1.35, 1.15, 2.2])
-    with col_sel_1:
-        if st.button("Selecionar somente os filtrados", use_container_width=True):
-            st.session_state["uids_modelos_selecionados"] = df_filtrado["uid"].tolist()
-            st.session_state["versao_seletor_modelos"] += 1
-    with col_sel_2:
-        if st.button("Adicionar filtrados", use_container_width=True):
-            selecionados = set(st.session_state["uids_modelos_selecionados"])
-            st.session_state["uids_modelos_selecionados"] = [
-                *selecionados,
-                *[uid for uid in df_filtrado["uid"] if uid not in selecionados],
-            ]
-            st.session_state["versao_seletor_modelos"] += 1
-    with col_sel_3:
-        if st.button("Selecionar padrões", use_container_width=True):
-            st.session_state["uids_modelos_selecionados"] = uids_padrao
-            st.session_state["versao_seletor_modelos"] += 1
-    with col_sel_4:
-        if st.button("Limpar seleção", use_container_width=True):
-            st.session_state["uids_modelos_selecionados"] = []
-            st.session_state["versao_seletor_modelos"] += 1
-
-    st.caption(
-        f"Exibindo {len(df_filtrado)} de {len(df_base)} modelos | "
-        f"{len(st.session_state['uids_modelos_selecionados'])} selecionado(s)."
+    uids_selecionados = st.multiselect(
+        "Modelos para comparar",
+        opcoes,
+        format_func=lambda uid: rotulos[uid],
+        key=chave_seletor,
+        placeholder="Busque pelo nome do modelo ou provedor",
+        help="Digite para buscar e clique para adicionar. Use o × ao lado do nome para remover.",
     )
+    padroes, limpar = st.columns(2)
+    padroes.button("Um por fabricante", on_click=restaurar_selecao, args=(uids_padrao,), width="stretch", help="Prioriza Elite e Pro do catálogo; essa classificação não é um ranking de desempenho.")
+    limpar.button("Limpar seleção", on_click=restaurar_selecao, args=([],), width="stretch")
+    def alterar_fabricante(empresa, adicionar):
+        atuais = st.session_state[chave_seletor]
+        grupo = df_base.loc[df_base["empresa"] == empresa, "uid"].tolist()
+        restaurar_selecao(list(dict.fromkeys(atuais + grupo)) if adicionar else [uid for uid in atuais if uid not in grupo])
 
-    df_filtrado = df_filtrado.copy()
-    df_filtrado["Selecionar"] = df_filtrado["uid"].isin(
-        st.session_state["uids_modelos_selecionados"]
-    )
-    df_filtrado["contexto"] = df_filtrado["contexto_tokens"].apply(formatar_contexto)
-    df_filtrado["logo_img"] = df_filtrado["logo"].apply(image_to_data_url)
+    with st.expander("Selecionar por fabricante", expanded=False):
+        fabricante = st.selectbox("Fabricante", sorted(df_base["empresa"].unique()))
+        adicionar, remover = st.columns(2)
+        adicionar.button(f"Adicionar todos · {fabricante}", on_click=alterar_fabricante, args=(fabricante, True), width="stretch")
+        remover.button(f"Remover todos · {fabricante}", on_click=alterar_fabricante, args=(fabricante, False), width="stretch")
 
-    colunas = [
-        "Selecionar",
-        "logo_img",
-        "provedor",
-        "empresa",
-        "modelo_nome",
-        "modelo_id",
-        "status",
-        "tier",
-        "custo_input_1M",
-        "custo_output_1M",
-        "faixa_preco",
-        "contexto",
-        "observacao",
-        "uid",
-    ]
-
-    df_editor = df_filtrado[colunas]
-    df_editado = st.data_editor(
-        df_editor,
-        key=(
-            "model_selector_v20260711_"
-            f"{empresa_escolhida}_{preco_escolhido}_"
-            f"{st.session_state['versao_seletor_modelos']}"
-        ),
-        column_config={
-            "uid": None,
-            "Selecionar": st.column_config.CheckboxColumn(
-                "Selecionar",
-                help="Marque os modelos que deseja testar.",
-                default=False,
-            ),
-            "logo_img": st.column_config.ImageColumn("Logo", width="small"),
-            "provedor": st.column_config.TextColumn("Provedor", disabled=True),
-            "empresa": st.column_config.TextColumn("Empresa", disabled=True),
-            "modelo_nome": st.column_config.TextColumn("Modelo", disabled=True),
-            "modelo_id": st.column_config.TextColumn("Model ID", disabled=True),
-            "status": st.column_config.TextColumn("Status", disabled=True),
-            "tier": st.column_config.TextColumn("Tier", disabled=True),
-            "custo_input_1M": st.column_config.TextColumn("Input/1M", disabled=True),
-            "custo_output_1M": st.column_config.TextColumn("Output/1M", disabled=True),
-            "faixa_preco": st.column_config.TextColumn("Preço", disabled=True),
-            "contexto": st.column_config.TextColumn("Contexto", disabled=True),
-            "observacao": st.column_config.TextColumn("Observação", disabled=True),
-        },
-        hide_index=True,
-        width="stretch",
-        height=620,
-    )
-
-
-uids_visiveis = set(df_filtrado["uid"])
-uids_selecionados = [
-    *[
-        uid
-        for uid in st.session_state["uids_modelos_selecionados"]
-        if uid not in uids_visiveis
-    ],
-    *df_editado.loc[df_editado["Selecionar"], "uid"].tolist(),
-]
-st.session_state["uids_modelos_selecionados"] = uids_selecionados
+st.session_state["uids_modelos_selecionados"] = uids_selecionados.copy()
 ordem = {uid: pos for pos, uid in enumerate(uids_selecionados)}
 modelos_selecionados = df_modelos[df_modelos["uid"].isin(uids_selecionados)].copy()
 if not modelos_selecionados.empty:
@@ -609,29 +602,14 @@ if not modelos_selecionados.empty:
     modelos_selecionados = modelos_selecionados.sort_values("ordem").drop(columns=["ordem"])
 
 
-with col_configuracoes, st.expander("Preview do prompt", expanded=False):
-    if prompt.strip():
-        prompt_preview = construir_prompt_final(prompt, tamanho_resposta, selecoes_personalidade)
-        st.markdown(f"**Prompt enviado:** ({contar_tokens(prompt_preview)} tokens estimados)")
-        st.text_area(
-            "Preview do prompt enviado",
-            value=prompt_preview,
-            height=260,
-            disabled=True,
-            label_visibility="collapsed",
-        )
-    else:
-        st.info("Digite um prompt para ver o preview.")
-
-
-botao_teste = st.button(
-    "Testar modelos selecionados", type="primary", use_container_width=True
-)
-
-if modelos_selecionados.empty:
-    st.warning("Selecione pelo menos um modelo para testar.")
-else:
-    st.success(f"Modelos Selecionados: {len(modelos_selecionados)}")
+col_contagem, col_testar = st.columns([1, 3], vertical_alignment="center")
+with col_contagem:
+    st.info(f"{len(modelos_selecionados)} modelo(s) selecionado(s)")
+with col_testar:
+    botao_teste = st.button(
+        "Testar modelos selecionados", type="primary", width="stretch",
+        disabled=modelos_selecionados.empty,
+    )
 
 
 if botao_teste:
