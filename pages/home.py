@@ -14,6 +14,7 @@ cards = [
     (":material/auto_fix_high:", "Engenharia de Prompt", "Aprenda a escrever instruções melhores e use o otimizador de prompt com IA.", "pages/otimizador_prompt.py"),
     (":material/science:", "Laboratório de Modelos", "Compare provedores, modelos, estilos de resposta e custos.", "pages/llms.py"),
     (":material/hub:", "Embedding Lab", "Aprenda embeddings, similaridade, busca semântica, classificação e multimodalidade.", "pages/embedding_lab.py"),
+    (":material/percent:", "Probabilidades de Tokens", "Reproduza uma geração passo a passo e compare as alternativas consideradas pelo modelo.", "pages/token_probabilities.py"),
 ]
 CARD_IMAGES = {
     "Chatbot": "assets/home/chatbot.png",
@@ -27,7 +28,8 @@ for start in range(0, len(cards), 2):
     for column, (icon, title, description, target) in zip(columns, cards[start : start + 2]):
         with column:
             with st.container(border=True):
-                st.image(CARD_IMAGES[title], use_container_width=True)
+                if title in CARD_IMAGES:
+                    st.image(CARD_IMAGES[title], use_container_width=True)
                 st.markdown(f"### {title}")
                 st.write(description)
                 st.page_link(target, label=f"Abrir {title}", icon=icon, use_container_width=True)
